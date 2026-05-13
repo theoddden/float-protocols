@@ -23,6 +23,8 @@ pub mod metrics;
 pub mod sharding;
 pub mod snapshot;
 pub mod bitemporal;
+pub mod iridium_sbd;
+pub mod asts_protobuf;
 
 pub use protocol::{Protocol, Message};
 pub use translator::Translator;
@@ -33,3 +35,6 @@ pub use reliability::{CircuitBreaker, RetryPolicy};
 pub use sharding::{ShardManager, ShardId};
 pub use snapshot::{SnapshotManager, Snapshot};
 pub use bitemporal::{BiTemporalStore, BiTemporalQuery, QueryTime, SpreadStats};
+pub use iridium_sbd::IridiumSBDMessage;
+pub use asts_protobuf::{ASTSProtobufMessage, ZeroCopyTranslator};
+pub use translator::BufferPool;

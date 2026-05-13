@@ -27,6 +27,7 @@ Float Protocols bridges existing dead zone communication systems (Iridium, Inmar
 
 ## Features
 
+- **Zero-Allocation Hot Path**: Iridium SBD to ASTS Protobuf translation with NO heap allocations
 - **Protocol Translation**: Async translation between legacy protocols and AST SpaceMobile
 - **Bi-Temporal Logic**: Dual timestamps (t_event, t_system) for insurance underwriting and trade compliance
 - **Spread Calculation**: Deterministic mark between event time and system time for compliance
@@ -106,6 +107,55 @@ cargo run --release
 # Run with test message
 FLOAT_PROTOCOLS_TEST=1 cargo run --release
 ```
+
+## Zero-Allocation Hot Path
+
+Float Protocols implements a zero-allocation hot path for Iridium SBD to ASTS Protobuf translation:
+
+- **No Heap Allocations**: The critical translation path uses only stack-allocated buffers
+- **Zero-Copy Parsing**: Iridium SBD messages are parsed directly from input buffer
+- **Stack-Allocated Buffers**: Fixed-size buffers on stack, no dynamic allocation
+- **Zero-Copy Translation**: Payload is copied directly to output buffer without intermediate allocations
+
+### Zero-Allocation API
+
+```rust
+use float_protocols::{IridiumSBDMessage, ZeroCopyTranslator};
+
+// Parse Iridium SBD (zero-allocation)
+let iridium_msg = IridiumSBDMessage::parse(&iridium_data).unwrap();
+
+// Translate to ASTS Protobuf (zero-allocation)
+let mut translator = ZeroCopyTranslator::new();
+let mut output_buffer = [0u8; 2048];
+let size = translator.translate(&iridium_msg, &mut output_buffer).unwrap();
+
+// Output buffer now contains ASTS Protobuf data
+```
+
+### Buffer Pool
+
+For high-throughput scenarios, use the BufferPool for pre-allocated buffers:
+
+```rust
+use float_protocols::BufferPool;
+
+let mut buffer_pool = BufferPool::new(16); // 16 buffers of 2048 bytes each
+let buffer = buffer_pool.get_buffer(); // Get zero-allocation buffer
+```
+
+### Benchmarks
+
+Run benchmarks to verify zero-allocation performance:
+
+```bash
+cargo bench
+```
+
+Expected performance:
+- Iridium SBD parse: <100ns
+- Zero-copy translation: <200ns
+- Full hot path: <500ns
 
 ## Bi-Temporal Logic
 

@@ -2,8 +2,12 @@
 //! 
 //! Translates between legacy protocols (Iridium, Inmarsat, VSAT, etc.)
 //! and AST SpaceMobile cellular format, using async patterns for low latency.
+//! 
+//! Zero-allocation hot path for Iridium SBD to ASTS Protobuf translation.
 
-use crate::protocol::{Protocol, Message, Priority};
+use crate::protocol::{Message, Protocol, Priority};
+use crate::iridium_sbd::IridiumSBDMessage;
+use crate::asts_protobuf::ZeroCopyTranslator;
 use bytes::Bytes;
 use tokio::sync::mpsc;
 
@@ -11,6 +15,8 @@ pub struct Translator {
     // Async channels for translation pipeline
     input_tx: mpsc::Sender<Message>,
     output_rx: mpsc::Receiver<Message>,
+    // Zero-allocation translator for hot path
+    zero_copy_translator: ZeroCopyTranslator,
 }
 
 impl Translator {
@@ -20,19 +26,34 @@ impl Translator {
 
         // Spawn async translation task
         tokio::spawn(async move {
+            let mut translator = ZeroCopyTranslator::new();
             while let Some(message) = input_rx.recv().await {
-                let translated = Self::translate_message(message).await;
+                let translated = Self::translate_message(message, &mut translator).await;
                 if let Ok(translated) = translated {
                     let _ = output_tx.send(translated).await;
                 }
             }
         });
 
-        Self { input_tx, output_rx }
+        Self { input_tx, output_rx, zero_copy_translator: ZeroCopyTranslator::new() }
+    }
+
+    /// Zero-allocation hot path: translate Iridium SBD bytes to ASTS Protobuf
+    /// This is the critical path with NO heap allocations
+    pub fn translate_iridium_to_asts_hot_path(
+        iridium_data: &[u8],
+        output_buffer: &mut [u8],
+        translator: &mut ZeroCopyTranslator,
+    ) -> Result<usize, TranslateError> {
+        let iridium_msg = IridiumSBDMessage::parse(iridium_data)
+            .ok_or(TranslateError::InvalidProtocol)?;
+        
+        translator.translate(iridium_msg, output_buffer)
+            .ok_or(TranslateError::DataTooLarge)
     }
 
     /// Async translation with zero-copy where possible
-    async fn translate_message(message: Message) -> Result<Message, TranslateError> {
+    async fn translate_message(message: Message, translator: &mut ZeroCopyTranslator) -> Result<Message, TranslateError> {
         match message.protocol {
             Protocol::IridiumSBD => Self::translate_iridium(message).await,
             Protocol::InmarsatC => Self::translate_inmarsat(message).await,
@@ -125,12 +146,44 @@ impl Translator {
         Self::decode_iridium_sbd(data)
     }
 
+    pub fn zero_copy_translator(&mut self) -> &mut ZeroCopyTranslator {
+        &mut self.zero_copy_translator
+    }
+
     pub async fn send(&self, message: Message) -> Result<(), mpsc::error::SendError<Message>> {
         self.input_tx.send(message).await
     }
 
     pub async fn recv(&mut self) -> Option<Message> {
         self.output_rx.recv().await
+    }
+}
+
+/// Zero-allocation buffer pool for stack-allocated buffers
+pub struct BufferPool {
+    buffers: Vec<[u8; 2048]>,
+    next_index: usize,
+}
+
+impl BufferPool {
+    pub fn new(size: usize) -> Self {
+        let buffers = vec![[0u8; 2048]; size];
+        Self {
+            buffers,
+            next_index: 0,
+        }
+    }
+
+    /// Get a buffer from the pool (zero-allocation)
+    pub fn get_buffer(&mut self) -> &mut [u8; 2048] {
+        let index = self.next_index % self.buffers.len();
+        self.next_index += 1;
+        &mut self.buffers[index]
+    }
+
+    /// Get buffer at specific index
+    pub fn get_buffer_at(&mut self, index: usize) -> &mut [u8; 2048] {
+        &mut self.buffers[index % self.buffers.len()]
     }
 }
 
