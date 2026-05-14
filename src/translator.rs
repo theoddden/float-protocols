@@ -60,28 +60,6 @@ impl Translator {
             .ok_or(TranslateError::DataTooLarge)
     }
 
-    /// Synchronous zero-allocation translation (no async overhead)
-    /// Use this for the critical hot path when you have full control over the data flow.
-    /// This function is completely synchronous and allocates no heap memory.
-    ///
-    /// # Example
-    /// ```rust
-    /// let mut buffer = [0u8; 2048];
-    /// let size = translate_iridium_to_asts_sync(&iridium_data, &mut buffer)?;
-    /// ```
-    pub fn translate_iridium_to_asts_sync(
-        iridium_data: &[u8],
-        output_buffer: &mut [u8],
-    ) -> Result<usize, TranslateError> {
-        let mut translator = ZeroCopyTranslator::new();
-        let iridium_msg =
-            IridiumSBDMessage::parse(iridium_data).ok_or(TranslateError::InvalidProtocol)?;
-
-        translator
-            .translate(&iridium_msg, output_buffer)
-            .ok_or(TranslateError::DataTooLarge)
-    }
-
     /// Async translation with zero-copy where possible
     async fn translate_message(
         message: Message,
@@ -188,6 +166,28 @@ impl Translator {
     pub async fn recv(&mut self) -> Option<Message> {
         self.output_rx.recv().await
     }
+}
+
+/// Synchronous zero-allocation translation (no async overhead)
+/// Use this for the critical hot path when you have full control over the data flow.
+/// This function is completely synchronous and allocates no heap memory.
+///
+/// # Example
+/// ```rust
+/// let mut buffer = [0u8; 2048];
+/// let size = translate_iridium_to_asts_sync(&iridium_data, &mut buffer)?;
+/// ```
+pub fn translate_iridium_to_asts_sync(
+    iridium_data: &[u8],
+    output_buffer: &mut [u8],
+) -> Result<usize, TranslateError> {
+    let mut translator = ZeroCopyTranslator::new();
+    let iridium_msg =
+        IridiumSBDMessage::parse(iridium_data).ok_or(TranslateError::InvalidProtocol)?;
+
+    translator
+        .translate(&iridium_msg, output_buffer)
+        .ok_or(TranslateError::DataTooLarge)
 }
 
 /// Zero-allocation buffer pool for stack-allocated buffers

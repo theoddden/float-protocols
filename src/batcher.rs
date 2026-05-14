@@ -20,6 +20,9 @@ impl AsyncBatcher {
         let (input_tx, mut input_rx) = mpsc::channel::<Message>(buffer_size);
         let (output_tx, _output_rx) = mpsc::channel::<Vec<Message>>(buffer_size);
 
+        // Clone output_tx for the struct
+        let batch_tx = output_tx.clone();
+
         // Spawn async batching task
         tokio::spawn(async move {
             let mut buffer = Vec::new();
@@ -72,7 +75,7 @@ impl AsyncBatcher {
             _max_batch_size: max_batch_size,
             _batch_timeout: batch_timeout,
             input_tx,
-            batch_tx: output_tx,
+            batch_tx,
         }
     }
 
@@ -92,20 +95,9 @@ impl AsyncBatcher {
     }
 
     /// Get a sender for receiving batches
-    /// Consumers should create their own receiver channel and call subscribe()
+    /// Consumers should clone this and create their own receiver channel
     pub fn batch_sender(&self) -> mpsc::Sender<Vec<Message>> {
         self.batch_tx.clone()
-    }
-
-    /// Subscribe to batches by providing a receiver channel
-    /// This allows multiple consumers to receive batches
-    pub async fn subscribe(&self, mut tx: mpsc::Sender<Vec<Message>>) {
-        let mut rx = self.batch_tx.clone();
-        tokio::spawn(async move {
-            while let Some(batch) = rx.recv().await {
-                let _ = tx.send(batch).await;
-            }
-        });
     }
 }
 
