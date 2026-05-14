@@ -224,8 +224,8 @@ impl ShardManager {
         // Load balancing: select shard with least messages
         self.shards
             .iter()
-            .min_by_key(|(_, shard)| shard.len())
-            .map(|(id, _)| *id)
+            .min_by_key(|entry| entry.value().len())
+            .map(|entry| *entry.key())
             .unwrap_or_else(|| ShardId(0))
     }
 
@@ -259,6 +259,19 @@ pub enum ShardError {
     Backpressure,
     Timeout,
 }
+
+impl std::fmt::Display for ShardError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShardError::Full => write!(f, "Shard is full"),
+            ShardError::NotFound => write!(f, "Shard not found"),
+            ShardError::Backpressure => write!(f, "Backpressure: buffer utilization >80%"),
+            ShardError::Timeout => write!(f, "Operation timeout"),
+        }
+    }
+}
+
+impl std::error::Error for ShardError {}
 
 #[derive(Debug, Clone)]
 pub struct LeakStats {
