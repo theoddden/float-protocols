@@ -9,7 +9,6 @@
 //! - t_system (Transaction Time): When system first learned about event
 
 use crate::protocol::{Message, Protocol};
-use std::collections::HashMap;
 use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

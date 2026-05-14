@@ -4,7 +4,7 @@
 //! Integrates with telemetry for accurate ping monitoring.
 
 use crate::batcher::AsyncBatcher;
-use crate::bitemporal::{BiTemporalStore, QueryTime};
+use crate::bitemporal::BiTemporalStore;
 use crate::cache::AsyncCache;
 use crate::metrics::Metrics;
 use crate::protocol::{Message, Protocol};
@@ -65,7 +65,7 @@ impl Gateway {
         let bitemporal_store = Arc::new(BiTemporalStore::new(10000)); // Store 10k messages
         let (input_tx, input_rx) = mpsc::channel(buffer_size);
 
-        let gateway = Self {
+        let gateway = Arc::new(Self {
             translator,
             batcher,
             cache,
@@ -78,10 +78,13 @@ impl Gateway {
             asts_credentials,
             telemetry_config,
             input_tx,
-        };
+        });
 
         // Spawn main processing loop
-        tokio::spawn(gateway.process_loop(input_rx));
+        let gateway_clone = Arc::clone(&gateway);
+        tokio::spawn(async move {
+            gateway_clone.process_loop(input_rx).await;
+        });
 
         gateway
     }
@@ -243,6 +246,8 @@ impl Gateway {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::Bytes;
+    use crate::protocol::Priority;
 
     #[tokio::test]
     async fn test_gateway_creation() {

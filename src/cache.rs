@@ -3,7 +3,7 @@
 //! Provides TTL-based caching with async invalidation for protocol
 //! translations, reducing redundant computation over expensive satellite links.
 
-use crate::protocol::{Message, Priority, Protocol};
+use crate::protocol::{Message, Protocol};
 use bytes::Bytes;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
