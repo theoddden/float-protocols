@@ -132,19 +132,24 @@ impl Translator {
     // Protocol-specific decoders using nom for zero-copy parsing
     fn decode_iridium_sbd(data: &Bytes) -> Result<Bytes, TranslateError> {
         use nom::bytes::complete::take;
+        use nom::error::Error;
         use nom::number::complete::{be_u16, be_u8};
         use nom::sequence::tuple;
+        use nom::IResult;
+
+        // Convert Bytes to slice for nom parser
+        let data_slice = data.as_ref();
 
         // Iridium SBD format: [protocol (1)][length (2)][payload (N)][checksum (2)]
-        let result = tuple((
-            be_u8,    // protocol
-            be_u16,   // length
-            take(340u8), // payload (max 340 bytes)
-            be_u16,   // checksum
-        ))(data);
+        let result: IResult<&[u8], (_, _, &[u8], _), Error<&[u8]>> = tuple((
+            be_u8::<_, Error<&[u8]>>,       // protocol
+            be_u16::<_, Error<&[u8]>>,      // length
+            take::<usize, &[u8], Error<&[u8]>>(340usize), // payload (max 340 bytes)
+            be_u16::<_, Error<&[u8]>>,      // checksum
+        ))(data_slice);
 
         match result {
-            Ok((_, (protocol, length, payload, checksum))) => {
+            Ok((_, (protocol, length, payload, _checksum))) => {
                 // Validate length
                 if length > 340 {
                     return Err(TranslateError::InvalidProtocol);
