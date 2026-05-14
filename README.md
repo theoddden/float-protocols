@@ -4,12 +4,12 @@
 
 ## Overview
 
-Float Protocols is a primitive that bridges existing dead zone communication systems (Iridium, Inmarsat, VSAT, HF/VHF, RockBLOCK) to AST SpaceMobile's direct-to-cell network that is partly launched. Users bring their own ASTS account details for authentication. The system integrates with telemetry for accurate ping monitoring.
+Float Protocols is a primitive that bridges existing dead zone communication systems (Iridium, Inmarsat, VSAT, HF/VHF, RockBLOCK) to AST SpaceMobile's future direct-to-cell network that is partly launched. Users will bring their own ASTS account details for authentication. The system integrates with telemetry for accurate ping monitoring.
 
 **Design Principles:**
 - Async-first architecture for low latency
-- 99.9% uptime with circuit breakers, retries, and health checks
-- Ultra-lightweight: runs on pre-existing RAM on local devices
+- 99% uptime goal with circuit breakers, retries, and health checks
+- Ultra-lightweight: runs on pre-existing RAM on local ARM
 - Zero-allocation where possible using stack-allocated buffers
 - Fixed-size buffers for memory efficiency
 - Memory sharding for immediate deadzone uplink (InferX pattern)
@@ -41,37 +41,6 @@ Float Protocols is a primitive that bridges existing dead zone communication sys
 - **Reliability**: Circuit breakers, retry policies, and health checks for 99.9% uptime
 - **Telemetry Integration**: Accurate ping monitoring and metrics
 - **BYO Authentication**: Users bring their own ASTS account details
-
-## Architecture
-
-```
-┌─────────────────┐
-│  Legacy System  │
-│  (Iridium, etc) │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│         Float Protocols Gateway        │
-│  ┌─────────────┐  ┌──────────────┐   │
-│  │ Translator  │→ │   Batcher    │   │
-│  └─────────────┘  └──────────────┘   │
-│         ↓                ↓            │
-│  ┌─────────────┐  ┌──────────────┐   │
-│  │   Cache     │  │ Reliability  │   │
-│  └─────────────┘  └──────────────┘   │
-│         ↓                ↓            │
-│  ┌─────────────┐  ┌──────────────┐   │
-│  │   Sharding  │  │ Snapshotting │   │
-│  └─────────────┘  └──────────────┘   │
-└────────┬──────────────────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│ AST SpaceMobile │
-│ (BYO Account)   │
-└─────────────────┘
-```
 
 ## Installation
 
@@ -243,7 +212,7 @@ Float Protocols is designed for 99.9% uptime:
 
 ## Performance
 
-- **Binary Size**: <2MB optimized with LTO
+- **Binary Size**: <1.5MB optimized with LTO
 - **Memory Footprint**: <50MB with default configuration
 - **Latency**: <2ms for emergency messages
 - **Throughput**: 10,000+ messages/second
