@@ -23,6 +23,7 @@ pub struct Metrics {
     vsat_messages: AtomicU64,
     hfvhf_messages: AtomicU64,
     rockblock_messages: AtomicU64,
+    samsara_messages: AtomicU64,
     asts_messages: AtomicU64,
 }
 
@@ -41,6 +42,7 @@ impl Metrics {
             vsat_messages: AtomicU64::new(0),
             hfvhf_messages: AtomicU64::new(0),
             rockblock_messages: AtomicU64::new(0),
+            samsara_messages: AtomicU64::new(0),
             asts_messages: AtomicU64::new(0),
         }
     }
@@ -80,6 +82,7 @@ impl Metrics {
             Protocol::VSAT => self.vsat_messages.fetch_add(1, Ordering::Relaxed),
             Protocol::HFVHF => self.hfvhf_messages.fetch_add(1, Ordering::Relaxed),
             Protocol::RockBLOCK => self.rockblock_messages.fetch_add(1, Ordering::Relaxed),
+            Protocol::Samsara => self.samsara_messages.fetch_add(1, Ordering::Relaxed),
             Protocol::ASTSpaceMobile => self.asts_messages.fetch_add(1, Ordering::Relaxed),
         };
     }
@@ -109,6 +112,7 @@ impl Metrics {
             vsat_messages: self.vsat_messages.load(Ordering::Relaxed),
             hfvhf_messages: self.hfvhf_messages.load(Ordering::Relaxed),
             rockblock_messages: self.rockblock_messages.load(Ordering::Relaxed),
+            samsara_messages: self.samsara_messages.load(Ordering::Relaxed),
             asts_messages: self.asts_messages.load(Ordering::Relaxed),
         }
     }
@@ -126,6 +130,7 @@ pub struct MetricsSnapshot {
     pub vsat_messages: u64,
     pub hfvhf_messages: u64,
     pub rockblock_messages: u64,
+    pub samsara_messages: u64,
     pub asts_messages: u64,
 }
 

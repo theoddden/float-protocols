@@ -189,7 +189,8 @@ impl ShardManager {
             Protocol::VSAT => 3,
             Protocol::HFVHF => 4,
             Protocol::RockBLOCK => 5,
-            Protocol::ASTSpaceMobile => 6,
+            Protocol::Samsara => 6,
+            Protocol::ASTSpaceMobile => 7,
         };
         ShardId(hash % self.num_shards as u64)
     }
