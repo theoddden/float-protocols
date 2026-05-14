@@ -12,13 +12,13 @@ pub struct AsyncBatcher {
     _max_batch_size: usize,
     _batch_timeout: Duration,
     input_tx: mpsc::Sender<Message>,
-    _output_rx: mpsc::Receiver<Vec<Message>>,
+    batch_tx: mpsc::Sender<Vec<Message>>,
 }
 
 impl AsyncBatcher {
     pub fn new(max_batch_size: usize, batch_timeout: Duration, buffer_size: usize) -> Self {
         let (input_tx, mut input_rx) = mpsc::channel::<Message>(buffer_size);
-        let (output_tx, output_rx) = mpsc::channel::<Vec<Message>>(buffer_size);
+        let (output_tx, _output_rx) = mpsc::channel::<Vec<Message>>(buffer_size);
 
         // Spawn async batching task
         tokio::spawn(async move {
@@ -72,7 +72,7 @@ impl AsyncBatcher {
             _max_batch_size: max_batch_size,
             _batch_timeout: batch_timeout,
             input_tx,
-            _output_rx: output_rx,
+            batch_tx: output_tx,
         }
     }
 
@@ -91,10 +91,21 @@ impl AsyncBatcher {
         self.input_tx.send(message).await
     }
 
-    pub fn receiver(&self) -> mpsc::Receiver<Vec<Message>> {
-        // Note: Receivers cannot be cloned, this is a design limitation
-        // In production, this would need a different architecture
-        panic!("Receivers cannot be cloned - this is a design limitation")
+    /// Get a sender for receiving batches
+    /// Consumers should create their own receiver channel and call subscribe()
+    pub fn batch_sender(&self) -> mpsc::Sender<Vec<Message>> {
+        self.batch_tx.clone()
+    }
+
+    /// Subscribe to batches by providing a receiver channel
+    /// This allows multiple consumers to receive batches
+    pub async fn subscribe(&self, mut tx: mpsc::Sender<Vec<Message>>) {
+        let mut rx = self.batch_tx.clone();
+        tokio::spawn(async move {
+            while let Some(batch) = rx.recv().await {
+                let _ = tx.send(batch).await;
+            }
+        });
     }
 }
 

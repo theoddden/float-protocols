@@ -22,13 +22,19 @@ pub struct MemoryShard {
 
 impl MemoryShard {
     pub fn new(id: ShardId, max_size: usize, is_deadzone_shard: bool) -> Self {
-        Self {
+        let mut shard = Self {
             _id: id,
             buffer: Vec::with_capacity(max_size),
             max_size,
             last_access: Instant::now(),
             is_deadzone_shard,
-        }
+        };
+
+        // Pre-allocate buffer immediately for all shards
+        // This ensures immediate uplink capability when deadzone is detected
+        shard.buffer.reserve(max_size);
+
+        shard
     }
 
     pub fn push(&mut self, message: Message) -> Result<(), ShardError> {
@@ -59,13 +65,6 @@ impl MemoryShard {
 
     pub fn is_deadzone_shard(&self) -> bool {
         self.is_deadzone_shard
-    }
-
-    /// Pre-allocate buffer for immediate deadzone uplink
-    pub fn preallocate_for_deadzone(&mut self) {
-        if self.buffer.capacity() < self.max_size {
-            self.buffer.reserve(self.max_size - self.buffer.capacity());
-        }
     }
 }
 
@@ -133,12 +132,11 @@ impl ShardManager {
     }
 
     /// Push message to deadzone shard for immediate uplink when deadzone detected
+    /// Buffer is already pre-allocated during initialization for zero-latency access
     pub async fn push_deadzone(&self, message: Message) -> Result<ShardId, ShardError> {
         let mut shards = self.shards.write().await;
 
         if let Some(shard) = shards.get_mut(&self.deadzone_shard_id) {
-            // Pre-allocate if needed for immediate uplink
-            shard.preallocate_for_deadzone();
             shard.push(message)?;
             Ok(self.deadzone_shard_id)
         } else {

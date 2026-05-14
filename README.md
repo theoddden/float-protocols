@@ -134,6 +134,36 @@ let size = translator.translate(&iridium_msg, &mut output_buffer).unwrap();
 // Output buffer now contains ASTS Protobuf data
 ```
 
+### Synchronous Zero-Allocation API
+
+For maximum performance in the critical hot path, use the synchronous API:
+
+```rust
+use float_protocols::translate_iridium_to_asts_sync;
+
+let mut buffer = [0u8; 2048];
+let size = translate_iridium_to_asts_sync(&iridium_data, &mut buffer)?;
+// buffer[..size] now contains ASTS Protobuf data
+```
+
+### Zero-Allocation Trade-offs
+
+The async architecture (Tokio) requires heap allocations for:
+- Task spawning and scheduling
+- Channel buffers
+- Arc reference counting
+
+However, the core protocol parsing (`IridiumSBDMessage::parse`, `ZeroCopyTranslator::translate`) is genuinely zero-allocation. Use the synchronous API when you need:
+- Maximum performance in the hot path
+- No async overhead
+- Direct control over memory allocation
+
+Use the async Gateway when you need:
+- Bi-temporal storage
+- Caching
+- Reliability patterns (circuit breakers, retries)
+- Telemetry integration
+
 ## Critical Problems and Solutions
 
 Float Protocols addresses several critical problems in protocol translation:

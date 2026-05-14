@@ -9,6 +9,7 @@
 //! - t_system (Transaction Time): When system first learned about event
 
 use crate::protocol::{Message, Protocol};
+use std::collections::VecDeque;
 use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,14 +80,14 @@ impl BiTemporalQuery {
 }
 
 pub struct BiTemporalStore {
-    messages: RwLock<Vec<Message>>,
+    messages: RwLock<VecDeque<Message>>,
     max_messages: usize,
 }
 
 impl BiTemporalStore {
     pub fn new(max_messages: usize) -> Self {
         Self {
-            messages: RwLock::new(Vec::with_capacity(max_messages)),
+            messages: RwLock::new(VecDeque::with_capacity(max_messages)),
             max_messages,
         }
     }
@@ -95,12 +96,12 @@ impl BiTemporalStore {
     pub async fn store(&self, message: Message) {
         let mut messages = self.messages.write().await;
 
-        // Evict oldest if at capacity
+        // Evict oldest if at capacity (O(1) with VecDeque)
         if messages.len() >= self.max_messages {
-            messages.remove(0);
+            messages.pop_front();
         }
 
-        messages.push(message);
+        messages.push_back(message);
     }
 
     /// Query messages by valid time (what actually happened)

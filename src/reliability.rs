@@ -5,7 +5,22 @@
 
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::SystemTime;
 use tokio::time::{Duration, Instant};
+
+/// Initialize the startup timestamp for circuit breaker time tracking
+/// Call this once during application initialization
+pub fn init_startup_time() {
+    STARTUP_TIME.store(
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or(Duration::ZERO)
+            .as_millis() as u64,
+        Ordering::Release,
+    );
+}
+
+static STARTUP_TIME: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CircuitState {
@@ -221,7 +236,14 @@ trait InstantExt {
 
 impl InstantExt for tokio::time::Instant {
     fn elapsed_since_startup() -> Option<Duration> {
-        // In production, this would use actual startup time
-        Some(Duration::from_secs(0))
+        let startup = STARTUP_TIME.load(Ordering::Acquire);
+        if startup == 0 {
+            return Some(Duration::ZERO);
+        }
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or(Duration::ZERO)
+            .as_millis() as u64;
+        Some(Duration::from_millis(now.saturating_sub(startup)))
     }
 }
