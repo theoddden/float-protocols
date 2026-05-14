@@ -86,7 +86,16 @@ impl Translator {
 
     async fn translate_inmarsat(message: Message) -> Result<Message, TranslateError> {
         // Inmarsat C (teletype) → AST SpaceMobile cellular format
-        let cellular_data = Self::decode_inmarsat_c(&message.data)?;
+        let cellular_data = Self::decode_inmarsat_c(&message.data).map_err(|e| {
+            // Log corrupt frame event
+            tracing::error!(
+                protocol = %Protocol::InmarsatC,
+                error = %e,
+                data_size = message.data.len(),
+                "Corrupt Frame: InmarsatC parsing failed"
+            );
+            TranslateError::InvalidProtocol
+        })?;
         let translated = Message::new(Protocol::ASTSpaceMobile, cellular_data, message.priority);
         Ok(translated)
     }
@@ -127,7 +136,7 @@ impl Translator {
     }
 
     fn decode_inmarsat_c(data: &Bytes) -> Result<Bytes, TranslateError> {
-        let msg = InmarsatCMessage::parse(data).ok_or(TranslateError::InvalidProtocol)?;
+        let msg = InmarsatCMessage::parse(data).map_err(|_| TranslateError::InvalidProtocol)?;
         let encoded = msg.encode();
         Ok(Bytes::from(encoded))
     }

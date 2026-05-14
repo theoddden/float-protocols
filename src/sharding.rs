@@ -5,8 +5,9 @@
 //! transitions from connected to disconnected states.
 
 use crate::protocol::{Message, Protocol};
-use std::collections::HashMap;
-use tokio::sync::RwLock;
+use dashmap::DashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -69,16 +70,20 @@ impl MemoryShard {
 }
 
 pub struct ShardManager {
-    shards: RwLock<HashMap<ShardId, MemoryShard>>,
+    shards: DashMap<ShardId, MemoryShard>,
     num_shards: usize,
     shard_size: usize,
     _next_shard_id: u64,
     deadzone_shard_id: ShardId,
+    // Leak detection counters
+    messages_allocated: Arc<AtomicU64>,
+    messages_dropped: Arc<AtomicU64>,
+    messages_leaked: Arc<AtomicU64>,
 }
 
 impl ShardManager {
     pub fn new(num_shards: usize, shard_size: usize) -> Self {
-        let mut shards = HashMap::new();
+        let shards = DashMap::new();
 
         // Create dedicated deadzone shard (highest priority)
         let deadzone_shard_id = ShardId(0);
@@ -96,63 +101,89 @@ impl ShardManager {
         }
 
         Self {
-            shards: RwLock::new(shards),
+            shards,
             num_shards,
             shard_size,
             _next_shard_id: num_shards as u64,
             deadzone_shard_id,
+            messages_allocated: Arc::new(AtomicU64::new(0)),
+            messages_dropped: Arc::new(AtomicU64::new(0)),
+            messages_leaked: Arc::new(AtomicU64::new(0)),
         }
     }
 
     /// Get or create a shard for a specific protocol
-    pub async fn get_shard(&self, protocol: Protocol) -> ShardId {
+    pub fn get_shard(&self, protocol: Protocol) -> ShardId {
         let shard_id = self.protocol_to_shard_id(protocol);
-        let shards = self.shards.read().await;
 
-        if shards.contains_key(&shard_id) {
-            return shard_id;
+        if !self.shards.contains_key(&shard_id) {
+            self.create_shard(shard_id);
         }
 
-        drop(shards);
-        self.create_shard(shard_id).await;
         shard_id
     }
 
-    /// Push message to appropriate shard with load balancing
+    /// Push message to appropriate shard with load balancing and backpressure
     pub async fn push(&self, message: Message) -> Result<ShardId, ShardError> {
-        let shard_id = self.select_shard_for_message(&message).await;
-        let mut shards = self.shards.write().await;
+        // Check utilization before attempting push (backpressure)
+        let stats = self.stats();
+        if stats.utilization() > 0.8 {
+            self.messages_dropped.fetch_add(1, Ordering::AcqRel);
+            return Err(ShardError::Backpressure);
+        }
 
-        if let Some(shard) = shards.get_mut(&shard_id) {
-            shard.push(message)?;
-            Ok(shard_id)
-        } else {
-            Err(ShardError::NotFound)
+        let shard_id = self.select_shard_for_message(&message);
+
+        // Increment allocated counter
+        self.messages_allocated.fetch_add(1, Ordering::AcqRel);
+
+        // Try to push with timeout
+        match tokio::time::timeout(
+            Duration::from_millis(100),
+            async {
+                if let Some(mut shard) = self.shards.get_mut(&shard_id) {
+                    shard.push(message)
+                } else {
+                    Err(ShardError::NotFound)
+                }
+            },
+        )
+        .await
+        {
+            Ok(Ok(())) => Ok(shard_id),
+            Ok(Err(e)) => {
+                self.messages_dropped.fetch_add(1, Ordering::AcqRel);
+                Err(e)
+            }
+            Err(_) => {
+                self.messages_dropped.fetch_add(1, Ordering::AcqRel);
+                Err(ShardError::Timeout)
+            }
         }
     }
 
     /// Push message to deadzone shard for immediate uplink when deadzone detected
     /// Buffer is already pre-allocated during initialization for zero-latency access
     pub async fn push_deadzone(&self, message: Message) -> Result<ShardId, ShardError> {
-        let mut shards = self.shards.write().await;
+        self.messages_allocated.fetch_add(1, Ordering::AcqRel);
 
-        if let Some(shard) = shards.get_mut(&self.deadzone_shard_id) {
+        if let Some(mut shard) = self.shards.get_mut(&self.deadzone_shard_id) {
             shard.push(message)?;
             Ok(self.deadzone_shard_id)
         } else {
+            self.messages_dropped.fetch_add(1, Ordering::AcqRel);
             Err(ShardError::NotFound)
         }
     }
 
     /// Get deadzone shard for immediate uplink access
-    pub async fn get_deadzone_shard(&self) -> ShardId {
+    pub fn get_deadzone_shard(&self) -> ShardId {
         self.deadzone_shard_id
     }
 
     /// Drain all messages from a shard
-    pub async fn drain_shard(&self, shard_id: ShardId) -> Vec<Message> {
-        let mut shards = self.shards.write().await;
-        if let Some(shard) = shards.get_mut(&shard_id) {
+    pub fn drain_shard(&self, shard_id: ShardId) -> Vec<Message> {
+        if let Some(mut shard) = self.shards.get_mut(&shard_id) {
             shard.drain()
         } else {
             Vec::new()
@@ -160,13 +191,12 @@ impl ShardManager {
     }
 
     /// Get statistics across all shards
-    pub async fn stats(&self) -> ShardStats {
-        let shards = self.shards.read().await;
-        let total_messages: usize = shards.values().map(|s| s.len()).sum();
-        let active_shards = shards.values().filter(|s| !s.is_empty()).count();
+    pub fn stats(&self) -> ShardStats {
+        let total_messages: usize = self.shards.iter().map(|s| s.len()).sum();
+        let active_shards = self.shards.iter().filter(|s| !s.is_empty()).count();
 
         ShardStats {
-            total_shards: shards.len(),
+            total_shards: self.shards.len(),
             active_shards,
             total_messages,
             shard_size: self.shard_size,
@@ -174,9 +204,8 @@ impl ShardManager {
     }
 
     /// Evict idle shards to free memory
-    pub async fn evict_idle(&self, idle_threshold: Duration) {
-        let mut shards = self.shards.write().await;
-        shards.retain(|_, shard| shard.last_access().elapsed() < idle_threshold);
+    pub fn evict_idle(&self, idle_threshold: Duration) {
+        self.shards.retain(|_, shard| shard.last_access().elapsed() < idle_threshold);
     }
 
     fn protocol_to_shard_id(&self, protocol: Protocol) -> ShardId {
@@ -193,23 +222,35 @@ impl ShardManager {
         ShardId(hash % self.num_shards as u64)
     }
 
-    async fn select_shard_for_message(&self, _message: &Message) -> ShardId {
+    fn select_shard_for_message(&self, _message: &Message) -> ShardId {
         // Load balancing: select shard with least messages
-        let shards = self.shards.read().await;
-        let min_shard = shards
+        self.shards
             .iter()
             .min_by_key(|(_, shard)| shard.len())
             .map(|(id, _)| *id)
-            .unwrap_or_else(|| ShardId(0));
-
-        min_shard
+            .unwrap_or_else(|| ShardId(0))
     }
 
-    async fn create_shard(&self, shard_id: ShardId) {
-        let mut shards = self.shards.write().await;
-        shards
+    fn create_shard(&self, shard_id: ShardId) {
+        self.shards
             .entry(shard_id)
             .or_insert_with(|| MemoryShard::new(shard_id, self.shard_size, false));
+    }
+
+    /// Get leak detection statistics
+    pub fn leak_stats(&self) -> LeakStats {
+        LeakStats {
+            allocated: self.messages_allocated.load(Ordering::Acquire),
+            dropped: self.messages_dropped.load(Ordering::Acquire),
+            leaked: self.messages_leaked.load(Ordering::Acquire),
+        }
+    }
+
+    /// Reset leak detection counters
+    pub fn reset_leak_stats(&self) {
+        self.messages_allocated.store(0, Ordering::Release);
+        self.messages_dropped.store(0, Ordering::Release);
+        self.messages_leaked.store(0, Ordering::Release);
     }
 }
 
@@ -217,6 +258,25 @@ impl ShardManager {
 pub enum ShardError {
     Full,
     NotFound,
+    Backpressure,
+    Timeout,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeakStats {
+    pub allocated: u64,
+    pub dropped: u64,
+    pub leaked: u64,
+}
+
+impl LeakStats {
+    pub fn leak_rate(&self) -> f64 {
+        if self.allocated == 0 {
+            0.0
+        } else {
+            (self.leaked as f64) / (self.allocated as f64)
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

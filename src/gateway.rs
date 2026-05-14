@@ -129,8 +129,19 @@ impl Gateway {
 
         self.metrics.record_cache_miss();
 
-        // Push to appropriate shard for load balancing
-        let _ = self.shard_manager.push(message.clone()).await;
+        // Push to appropriate shard for load balancing (now with backpressure)
+        match self.shard_manager.push(message.clone()).await {
+            Ok(_) => {},
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    protocol = %message.protocol,
+                    "Failed to push message to shard"
+                );
+                self.metrics.record_error();
+                return;
+            }
+        }
 
         // Translate with circuit breaker
         let result = self

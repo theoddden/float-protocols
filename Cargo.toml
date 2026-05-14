@@ -24,10 +24,12 @@ serde_json = { version = "1.0", default-features = false, features = ["std"] }
 nom = "7.1"  # Parser combinator for protocol parsing
 hex = "0.4"  # Hex encoding/decoding
 zstd = "0.13"  # Compression for VSAT
+crc = "3.0"  # CRC checksums for payload validation
 
 # Reliability patterns
 tower = { version = "0.4", features = ["util", "timeout", "load-shed"], default-features = false }
 tower-http = { version = "0.5", features = ["trace", "cors"], default-features = false }
+dashmap = "6.0"  # Lock-free concurrent hashmap for sharding
 
 # Logging
 log = { version = "0.4", default-features = false }
