@@ -4,8 +4,8 @@
 
 use bytes::Bytes;
 use float_protocols::protocol::{Message, Priority, Protocol};
-use float_protocols::sharding::{ShardManager, ShardId};
-use tokio::time::{sleep, Duration, interval};
+use float_protocols::sharding::{ShardId, ShardManager};
+use tokio::time::{interval, Duration, sleep};
 
 #[tokio::test]
 async fn test_asts_toggle_stress() {
@@ -18,7 +18,8 @@ async fn test_asts_toggle_stress() {
         let mut interval = interval(Duration::from_millis(50));
         let mut uplink_active = true;
 
-        for _ in 0..200 { // 200 toggle cycles = 10 seconds
+        for _ in 0..200 {
+            // 200 toggle cycles = 10 seconds
             interval.tick().await;
             uplink_active = !uplink_active;
 
@@ -72,7 +73,10 @@ async fn test_5000_concurrent_writes() {
 
     // Validate no leaks
     let leak_stats = shard_manager.leak_stats();
-    assert_eq!(leak_stats.leaked, 0, "Memory leaked during concurrent writes");
+    assert_eq!(
+        leak_stats.leaked, 0,
+        "Memory leaked during concurrent writes"
+    );
 
     // Validate all messages accounted for
     let stats = shard_manager.stats();
@@ -111,8 +115,14 @@ async fn test_backpressure_under_load() {
     }
 
     // Some pushes should be rejected due to backpressure
-    assert!(backpressure_count > 0, "Backpressure not triggered under load");
+    assert!(
+        backpressure_count > 0,
+        "Backpressure not triggered under load"
+    );
 
     let leak_stats = shard_manager.leak_stats();
-    assert!(leak_stats.dropped > 0, "Messages should have been dropped due to backpressure");
+    assert!(
+        leak_stats.dropped > 0,
+        "Messages should have been dropped due to backpressure"
+    );
 }

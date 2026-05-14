@@ -21,10 +21,18 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseError::InvalidMagicNumber { found, expected } => {
-                write!(f, "Invalid magic number: found 0x{:08x}, expected 0x{:08x}", found, expected)
+                write!(
+                    f,
+                    "Invalid magic number: found 0x{:08x}, expected 0x{:08x}",
+                    found, expected
+                )
             }
             ParseError::ChecksumMismatch { expected, found } => {
-                write!(f, "Checksum mismatch: expected 0x{:04x}, found 0x{:04x}", expected, found)
+                write!(
+                    f,
+                    "Checksum mismatch: expected 0x{:04x}, found 0x{:04x}",
+                    expected, found
+                )
             }
             ParseError::InvalidLength { min, found } => {
                 write!(f, "Invalid length: minimum {}, found {}", min, found)
@@ -58,13 +66,19 @@ impl InmarsatCMessage {
     pub fn parse(data: &[u8]) -> Result<Self, ParseError> {
         // Minimum length: magic (4) + message_number (2) + dest_id (4) + source_id (4) + checksum (2) = 16 bytes
         if data.len() < 16 {
-            return Err(ParseError::InvalidLength { min: 16, found: data.len() });
+            return Err(ParseError::InvalidLength {
+                min: 16,
+                found: data.len(),
+            });
         }
 
         // Validate magic number (bytes 0-3)
         let magic = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
         if magic != MAGIC_NUMBER {
-            return Err(ParseError::InvalidMagicNumber { found: magic, expected: MAGIC_NUMBER });
+            return Err(ParseError::InvalidMagicNumber {
+                found: magic,
+                expected: MAGIC_NUMBER,
+            });
         }
 
         // Validate checksum (last 2 bytes)
@@ -73,7 +87,10 @@ impl InmarsatCMessage {
         let stored_checksum = u16::from_be_bytes([data[payload_len], data[payload_len + 1]]);
 
         if computed_checksum != stored_checksum {
-            return Err(ParseError::ChecksumMismatch { expected: computed_checksum, found: stored_checksum });
+            return Err(ParseError::ChecksumMismatch {
+                expected: computed_checksum,
+                found: stored_checksum,
+            });
         }
 
         // Parse message (excluding checksum bytes)
@@ -97,7 +114,9 @@ impl InmarsatCMessage {
 
         // Validate destination ID is valid hex
         if hex::decode(&destination_id).is_err() {
-            return Err(ParseError::InvalidDestinationId { value: destination_id });
+            return Err(ParseError::InvalidDestinationId {
+                value: destination_id,
+            });
         }
 
         let source_id = format!(
@@ -107,7 +126,9 @@ impl InmarsatCMessage {
 
         // Validate source ID is valid hex
         if hex::decode(&source_id).is_err() {
-            return Err(ParseError::InvalidSourceId { value: source_id });
+            return Err(ParseError::InvalidSourceId {
+                value: source_id,
+            });
         }
 
         let payload = if data.len() > 14 {
@@ -200,7 +221,10 @@ mod tests {
 
         let msg = InmarsatCMessage::parse(&data);
         assert!(msg.is_err());
-        assert!(matches!(msg.unwrap_err(), ParseError::InvalidMagicNumber { .. }));
+        assert!(matches!(
+            msg.unwrap_err(),
+            ParseError::InvalidMagicNumber { .. }
+        ));
     }
 
     #[test]
@@ -223,7 +247,10 @@ mod tests {
         let encoded = msg.encode();
         assert!(encoded.len() >= 16);
         // Check magic number
-        assert_eq!(u32::from_be_bytes([encoded[0], encoded[1], encoded[2], encoded[3]]), MAGIC_NUMBER);
+        assert_eq!(
+            u32::from_be_bytes([encoded[0], encoded[1], encoded[2], encoded[3]]),
+            MAGIC_NUMBER
+        );
         // Check message number
         assert_eq!(u16::from_be_bytes([encoded[4], encoded[5]]), 1234);
     }

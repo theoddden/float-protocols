@@ -131,7 +131,7 @@ impl Gateway {
 
         // Push to appropriate shard for load balancing (now with backpressure)
         match self.shard_manager.push(message.clone()).await {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 tracing::warn!(
                     error = %e,

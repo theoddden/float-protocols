@@ -138,16 +138,13 @@ impl ShardManager {
         self.messages_allocated.fetch_add(1, Ordering::AcqRel);
 
         // Try to push with timeout
-        match tokio::time::timeout(
-            Duration::from_millis(100),
-            async {
-                if let Some(mut shard) = self.shards.get_mut(&shard_id) {
-                    shard.push(message)
-                } else {
-                    Err(ShardError::NotFound)
-                }
-            },
-        )
+        match tokio::time::timeout(Duration::from_millis(100), async {
+            if let Some(mut shard) = self.shards.get_mut(&shard_id) {
+                shard.push(message)
+            } else {
+                Err(ShardError::NotFound)
+            }
+        })
         .await
         {
             Ok(Ok(())) => Ok(shard_id),
@@ -205,7 +202,8 @@ impl ShardManager {
 
     /// Evict idle shards to free memory
     pub fn evict_idle(&self, idle_threshold: Duration) {
-        self.shards.retain(|_, shard| shard.last_access().elapsed() < idle_threshold);
+        self.shards
+            .retain(|_, shard| shard.last_access().elapsed() < idle_threshold);
     }
 
     fn protocol_to_shard_id(&self, protocol: Protocol) -> ShardId {
