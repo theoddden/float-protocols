@@ -173,9 +173,13 @@ impl Translator {
 /// This function is completely synchronous and allocates no heap memory.
 ///
 /// # Example
-/// ```rust
+/// ```rust,no_run
+/// use float_protocols::{IridiumSBDMessage, translate_iridium_to_asts_sync};
+///
+/// let iridium_data = vec![0x01, 0x00, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00];
 /// let mut buffer = [0u8; 2048];
-/// let size = translate_iridium_to_asts_sync(&iridium_data, &mut buffer)?;
+/// let size = translate_iridium_to_asts_sync(&iridium_data, &mut buffer).unwrap();
+/// // buffer[..size] now contains ASTS Protobuf data
 /// ```
 pub fn translate_iridium_to_asts_sync(
     iridium_data: &[u8],
