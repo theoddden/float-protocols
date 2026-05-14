@@ -142,10 +142,10 @@ impl Translator {
 
         // Iridium SBD format: [protocol (1)][length (2)][payload (N)][checksum (2)]
         let result: IResult<&[u8], (_, _, &[u8], _), Error<&[u8]>> = tuple((
-            be_u8::<_, Error<&[u8]>>,       // protocol
-            be_u16::<_, Error<&[u8]>>,      // length
+            be_u8::<_, Error<&[u8]>>,                     // protocol
+            be_u16::<_, Error<&[u8]>>,                    // length
             take::<usize, &[u8], Error<&[u8]>>(340usize), // payload (max 340 bytes)
-            be_u16::<_, Error<&[u8]>>,      // checksum
+            be_u16::<_, Error<&[u8]>>,                    // checksum
         ))(data_slice);
 
         match result {
