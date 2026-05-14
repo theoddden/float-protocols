@@ -200,21 +200,22 @@ impl Translator {
         use nom::sequence::tuple;
         use nom::IResult;
 
-        type SamsaraParseResult<'a> = IResult<&'a [u8], (_, _, _, u64, f64, f64, u32), Error<&'a [u8]>>;
+        type SamsaraParseResult<'a> =
+            IResult<&'a [u8], (_, _, _, u64, f64, f64, u32), Error<&'a [u8]>>;
 
         // Convert Bytes to slice for nom parser
         let data_slice = data.as_ref();
 
         // Samsara binary format: [version (1)][device_id_len (2)][device_id (N)][timestamp (8)][latitude (8)][longitude (8)][payload_len (4)][payload (N)]
         let result: SamsaraParseResult = tuple((
-                be_u8::<_, Error<&[u8]>>,                      // version
-                be_u16::<_, Error<&[u8]>>,                     // device_id_len
-                take::<usize, &[u8], Error<&[u8]>>(1024usize), // device_id (max 1024 bytes)
-                be_u64::<_, Error<&[u8]>>,                     // timestamp
-                be_f64::<_, Error<&[u8]>>,                     // latitude
-                be_f64::<_, Error<&[u8]>>,                     // longitude
-                be_u32::<_, Error<&[u8]>>,                     // payload_len
-            ))(data_slice);
+            be_u8::<_, Error<&[u8]>>,                      // version
+            be_u16::<_, Error<&[u8]>>,                     // device_id_len
+            take::<usize, &[u8], Error<&[u8]>>(1024usize), // device_id (max 1024 bytes)
+            be_u64::<_, Error<&[u8]>>,                     // timestamp
+            be_f64::<_, Error<&[u8]>>,                     // latitude
+            be_f64::<_, Error<&[u8]>>,                     // longitude
+            be_u32::<_, Error<&[u8]>>,                     // payload_len
+        ))(data_slice);
 
         match result {
             Ok((
