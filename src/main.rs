@@ -65,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("FLOAT_PROTOCOLS_TEST").is_ok() {
         let test_message = Message::new(
             Protocol::IridiumSBD,
-            Bytes::from(b"test message from Float Protocols"),
+            Bytes::from(&b"test message from Float Protocols"[..]),
             Priority::Operational,
         );
         gateway.send(test_message).await?;
