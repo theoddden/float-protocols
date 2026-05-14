@@ -205,6 +205,12 @@ impl Gateway {
         self.bitemporal_store.clone()
     }
 
+    /// Health check for Kubernetes liveness/readiness probes
+    /// Returns true if circuit breaker is closed (system healthy)
+    pub async fn health_check(&self) -> bool {
+        self.circuit_breaker.state() == crate::reliability::CircuitState::Closed
+    }
+
     /// Query by valid time (what actually happened in physical world)
     pub async fn query_valid_time(&self, start_ms: u64, end_ms: u64) -> Vec<Message> {
         self.bitemporal_store

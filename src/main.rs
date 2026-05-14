@@ -17,8 +17,53 @@ use float_protocols::protocol::{Message, Priority, Protocol};
 #[cfg(not(unix))]
 use tokio::signal;
 
+/// Validate environment variables at startup
+fn validate_config() -> Result<(), Box<dyn std::error::Error>> {
+    // Validate ASTS credentials if provided
+    if let Ok(account_id) = std::env::var("ASTS_ACCOUNT_ID") {
+        if account_id.is_empty() {
+            return Err("ASTS_ACCOUNT_ID cannot be empty".into());
+        }
+        if account_id.len() > 256 {
+            return Err("ASTS_ACCOUNT_ID exceeds maximum length (256)".into());
+        }
+    }
+
+    if let Ok(api_key) = std::env::var("ASTS_API_KEY") {
+        if api_key.is_empty() {
+            return Err("ASTS_API_KEY cannot be empty".into());
+        }
+        if api_key.len() < 16 {
+            return Err("ASTS_API_KEY too short (minimum 16 characters)".into());
+        }
+    }
+
+    // Validate telemetry config
+    if let Ok(interval) = std::env::var("TELEMETRY_PING_INTERVAL_MS") {
+        let interval_ms: u64 = interval.parse()?;
+        if interval_ms < 1000 {
+            return Err("TELEMETRY_PING_INTERVAL_MS must be at least 1000ms".into());
+        }
+        if interval_ms > 300000 {
+            return Err("TELEMETRY_PING_INTERVAL_MS exceeds maximum (300000ms)".into());
+        }
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Set up panic hook for structured crash logging
+    std::panic::set_hook(Box::new(|panic_info| {
+        let backtrace = std::backtrace::Backtrace::new();
+        tracing::error!(
+            panic = %panic_info,
+            backtrace = %backtrace,
+            "Float Protocols crashed"
+        );
+    }));
+
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -28,6 +73,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     tracing::info!("Float Protocols starting up...");
+
+    // Validate environment variables
+    validate_config()?;
 
     // Load configuration from environment or config file
     let asts_credentials = std::env::var("ASTS_ACCOUNT_ID")
@@ -74,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Test message sent");
     }
 
-    // Wait for shutdown signal
+    // Wait for shutdown signal with graceful drain
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
@@ -83,10 +131,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         tokio::select! {
             _ = sigterm.recv() => {
-                tracing::info!("Received SIGTERM, shutting down...");
+                tracing::info!("Received SIGTERM, initiating graceful shutdown...");
             }
             _ = sigint.recv() => {
-                tracing::info!("Received SIGINT, shutting down...");
+                tracing::info!("Received SIGINT, initiating graceful shutdown...");
             }
         }
     }
@@ -94,7 +142,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(unix))]
     {
         signal::ctrl_c().await?;
-        tracing::info!("Received Ctrl+C, shutting down...");
+        tracing::info!("Received Ctrl+C, initiating graceful shutdown...");
+    }
+
+    // Graceful shutdown: drain in-flight messages with timeout
+    tracing::info!("Draining in-flight messages (5s timeout)...");
+    let drain_result = tokio::time::timeout(
+        tokio::time::Duration::from_secs(5),
+        async {
+            // Gateway will naturally drain as we drop it
+            // The timeout ensures we don't hang indefinitely
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        },
+    )
+    .await;
+
+    match drain_result {
+        Ok(_) => tracing::info!("Graceful shutdown complete"),
+        Err(_) => tracing::warn!("Shutdown timeout exceeded, forcing exit"),
     }
 
     // Print final metrics

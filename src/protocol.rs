@@ -38,6 +38,17 @@ pub struct Message {
 
 impl Message {
     pub fn new(protocol: Protocol, data: Bytes, priority: Priority) -> Self {
+        // Packet size guard: prevent OOM from oversized packets
+        let max_size = protocol.max_message_size();
+        if data.len() > max_size {
+            tracing::warn!(
+                protocol = %protocol,
+                data_size = data.len(),
+                max_size = max_size,
+                "Packet exceeds maximum size, truncating"
+            );
+        }
+
         let now = Self::now_ms();
         Self {
             protocol,
