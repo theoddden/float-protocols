@@ -194,9 +194,65 @@ impl Translator {
     }
 
     fn decode_samsara(data: &Bytes) -> Result<Bytes, TranslateError> {
-        // TODO: Implement Samsara protocol parsing
-        // Samsara uses JSON over HTTPS, for now pass through
-        Ok(data.clone())
+        use nom::bytes::complete::take;
+        use nom::error::Error;
+        use nom::number::complete::{be_f64, be_u16, be_u32, be_u64, be_u8};
+        use nom::sequence::tuple;
+        use nom::IResult;
+
+        // Convert Bytes to slice for nom parser
+        let data_slice = data.as_ref();
+
+        // Samsara binary format: [version (1)][device_id_len (2)][device_id (N)][timestamp (8)][latitude (8)][longitude (8)][payload_len (4)][payload (N)]
+        let result: IResult<&[u8], (_, _, _, u64, f64, f64, u32), Error<&[u8]>> = tuple((
+            be_u8::<_, Error<&[u8]>>,       // version
+            be_u16::<_, Error<&[u8]>>,      // device_id_len
+            take::<usize, &[u8], Error<&[u8]>>(1024usize), // device_id (max 1024 bytes)
+            be_u64::<_, Error<&[u8]>>,      // timestamp
+            be_f64::<_, Error<&[u8]>>,      // latitude
+            be_f64::<_, Error<&[u8]>>,      // longitude
+            be_u32::<_, Error<&[u8]>>,      // payload_len
+        ))(data_slice);
+
+        match result {
+            Ok((remaining, (version, device_id_len, device_id_bytes, timestamp, latitude, longitude, payload_len))) => {
+                // Validate version
+                if version != 1 {
+                    return Err(TranslateError::InvalidProtocol);
+                }
+
+                // Validate device_id_len
+                let actual_device_id_len = device_id_len as usize;
+                if actual_device_id_len > device_id_bytes.len() {
+                    return Err(TranslateError::InvalidProtocol);
+                }
+
+                let actual_device_id = &device_id_bytes[..actual_device_id_len];
+                let device_id = String::from_utf8(actual_device_id.to_vec())
+                    .map_err(|_| TranslateError::InvalidProtocol)?;
+
+                // Extract payload
+                let actual_payload_len = payload_len as usize;
+                if remaining.len() < actual_payload_len {
+                    return Err(TranslateError::InvalidProtocol);
+                }
+                let payload = &remaining[..actual_payload_len];
+
+                // Convert to ASTS cellular format
+                // For Samsara, we pass through the payload with a cellular header
+                // Include device_id, timestamp, lat/lon in the cellular header
+                let mut cellular = Vec::with_capacity(1 + device_id.len() + 8 + 8 + 8 + payload.len());
+                cellular.push(0x07); // Samsara protocol identifier
+                cellular.extend_from_slice(device_id.as_bytes());
+                cellular.extend_from_slice(&timestamp.to_be_bytes());
+                cellular.extend_from_slice(&latitude.to_be_bytes());
+                cellular.extend_from_slice(&longitude.to_be_bytes());
+                cellular.extend_from_slice(payload);
+
+                Ok(Bytes::from(cellular))
+            }
+            Err(_) => Err(TranslateError::InvalidProtocol),
+        }
     }
 
     pub fn zero_copy_translator(&mut self) -> &mut ZeroCopyTranslator {
