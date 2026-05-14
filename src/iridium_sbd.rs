@@ -1,5 +1,5 @@
 //! Zero-allocation Iridium SBD protocol parsing
-//! 
+//!
 //! Parses Iridium Short Burst Data packets without any heap allocations.
 //! Uses stack-allocated buffers and zero-copy parsing techniques.
 

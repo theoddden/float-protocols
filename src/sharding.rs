@@ -1,5 +1,5 @@
 //! Memory sharding for immediate uplink when deadzone is hit (InferX pattern)
-//! 
+//!
 //! Pre-shards memory into dedicated uplink buffers that are immediately available
 //! when a deadzone is detected, eliminating allocation latency during critical
 //! transitions from connected to disconnected states.
@@ -81,19 +81,19 @@ pub struct ShardManager {
 impl ShardManager {
     pub fn new(num_shards: usize, shard_size: usize) -> Self {
         let mut shards = HashMap::new();
-        
+
         // Create dedicated deadzone shard (highest priority)
         let deadzone_shard_id = ShardId(0);
         shards.insert(
             deadzone_shard_id,
-            MemoryShard::new(deadzone_shard_id, shard_size, true)
+            MemoryShard::new(deadzone_shard_id, shard_size, true),
         );
-        
+
         // Create regular shards
         for i in 1..num_shards {
             shards.insert(
                 ShardId(i as u64),
-                MemoryShard::new(ShardId(i as u64), shard_size, false)
+                MemoryShard::new(ShardId(i as u64), shard_size, false),
             );
         }
 
@@ -110,7 +110,7 @@ impl ShardManager {
     pub async fn get_shard(&self, protocol: Protocol) -> ShardId {
         let shard_id = self.protocol_to_shard_id(protocol);
         let shards = self.shards.read().await;
-        
+
         if shards.contains_key(&shard_id) {
             return shard_id;
         }
@@ -124,7 +124,7 @@ impl ShardManager {
     pub async fn push(&self, message: Message) -> Result<ShardId, ShardError> {
         let shard_id = self.select_shard_for_message(&message).await;
         let mut shards = self.shards.write().await;
-        
+
         if let Some(shard) = shards.get_mut(&shard_id) {
             shard.push(message)?;
             Ok(shard_id)
@@ -136,7 +136,7 @@ impl ShardManager {
     /// Push message to deadzone shard for immediate uplink when deadzone detected
     pub async fn push_deadzone(&self, message: Message) -> Result<ShardId, ShardError> {
         let mut shards = self.shards.write().await;
-        
+
         if let Some(shard) = shards.get_mut(&self.deadzone_shard_id) {
             // Pre-allocate if needed for immediate uplink
             shard.preallocate_for_deadzone();
@@ -167,7 +167,7 @@ impl ShardManager {
         let shards = self.shards.read().await;
         let total_messages: usize = shards.values().map(|s| s.len()).sum();
         let active_shards = shards.values().filter(|s| !s.is_empty()).count();
-        
+
         ShardStats {
             total_shards: shards.len(),
             active_shards,
@@ -203,13 +203,14 @@ impl ShardManager {
             .min_by_key(|(_, shard)| shard.len())
             .map(|(id, _)| *id)
             .unwrap_or_else(|| ShardId(0));
-        
+
         min_shard
     }
 
     async fn create_shard(&self, shard_id: ShardId) {
         let mut shards = self.shards.write().await;
-        shards.entry(shard_id)
+        shards
+            .entry(shard_id)
             .or_insert_with(|| MemoryShard::new(shard_id, self.shard_size));
     }
 }

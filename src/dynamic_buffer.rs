@@ -1,5 +1,5 @@
 //! Dynamic buffer management to solve Protobuf "Size Trap"
-//! 
+//!
 //! Fixed-size stack buffers can overflow with unexpected payloads.
 //! This module provides dynamic sizing with bounds checking and graceful degradation.
 
@@ -33,9 +33,9 @@ impl DynamicBuffer {
         let ptr = if initial_capacity == 0 {
             None
         } else {
-            let layout = Layout::array::<u8>(initial_capacity)
-                .map_err(|_| BufferError::InvalidSize)?;
-            
+            let layout =
+                Layout::array::<u8>(initial_capacity).map_err(|_| BufferError::InvalidSize)?;
+
             unsafe {
                 let ptr = alloc(layout);
                 if ptr.is_null() {
@@ -95,9 +95,9 @@ impl DynamicBuffer {
                 .map_err(|_| BufferError::InvalidSize)?;
 
             let new_ptr = if let Some(old_ptr) = self.ptr {
-                let old_layout = Layout::array::<u8>(self.capacity)
-                    .map_err(|_| BufferError::InvalidSize)?;
-                
+                let old_layout =
+                    Layout::array::<u8>(self.capacity).map_err(|_| BufferError::InvalidSize)?;
+
                 let ptr = realloc(old_ptr.as_ptr() as *mut u8, old_layout, new_layout.size);
                 if ptr.is_null() {
                     return Err(BufferError::AllocationFailed);
@@ -172,8 +172,8 @@ impl DynamicBuffer {
 
         unsafe {
             if let Some(ptr) = self.ptr {
-                let layout = Layout::array::<u8>(self.capacity)
-                    .map_err(|_| BufferError::InvalidSize)?;
+                let layout =
+                    Layout::array::<u8>(self.capacity).map_err(|_| BufferError::InvalidSize)?;
                 dealloc(ptr.as_ptr() as *mut u8, layout);
             }
 
@@ -190,9 +190,7 @@ impl Drop for DynamicBuffer {
     fn drop(&mut self) {
         unsafe {
             if let Some(ptr) = self.ptr {
-                let layout = Layout::array::<u8>(self.capacity)
-                    .map_err(|_| ())
-                    .unwrap(); // We know the layout is valid
+                let layout = Layout::array::<u8>(self.capacity).map_err(|_| ()).unwrap(); // We know the layout is valid
                 dealloc(ptr.as_ptr() as *mut u8, layout);
             }
         }
@@ -203,7 +201,11 @@ impl std::fmt::Display for BufferError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             BufferError::TooLarge { requested, max } => {
-                write!(f, "Buffer too large: requested {} bytes, max {} bytes", requested, max)
+                write!(
+                    f,
+                    "Buffer too large: requested {} bytes, max {} bytes",
+                    requested, max
+                )
             }
             BufferError::AllocationFailed => write!(f, "Buffer allocation failed"),
             BufferError::InvalidSize => write!(f, "Invalid buffer size"),
@@ -221,9 +223,13 @@ pub struct DynamicBufferPool {
 }
 
 impl DynamicBufferPool {
-    pub fn new(pool_size: usize, initial_capacity: usize, max_capacity: usize) -> Result<Self, BufferError> {
+    pub fn new(
+        pool_size: usize,
+        initial_capacity: usize,
+        max_capacity: usize,
+    ) -> Result<Self, BufferError> {
         let mut buffers = Vec::with_capacity(pool_size);
-        
+
         for _ in 0..pool_size {
             buffers.push(DynamicBuffer::new(initial_capacity, max_capacity)?);
         }
@@ -260,11 +266,11 @@ mod tests {
     #[test]
     fn test_dynamic_buffer_growth() {
         let mut buffer = DynamicBuffer::new(10, 1000).unwrap();
-        
+
         // Write small data
         buffer.write(&[1, 2, 3]).unwrap();
         assert_eq!(buffer.len(), 3);
-        
+
         // Write larger data (should grow)
         let large_data = vec![0u8; 500];
         buffer.write(&large_data).unwrap();
@@ -275,20 +281,20 @@ mod tests {
     #[test]
     fn test_buffer_too_large() {
         let mut buffer = DynamicBuffer::new(10, 100).unwrap();
-        
+
         let too_large = vec![0u8; 200];
         let result = buffer.write(&too_large);
-        
+
         assert!(matches!(result, Err(BufferError::TooLarge { .. })));
     }
 
     #[test]
     fn test_buffer_pool() {
         let mut pool = DynamicBufferPool::new(4, 10, 1000).unwrap();
-        
+
         let buffer = pool.get_buffer().unwrap();
         buffer.write(&[1, 2, 3]).unwrap();
-        
+
         assert_eq!(buffer.len(), 3);
     }
 }

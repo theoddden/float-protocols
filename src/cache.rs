@@ -1,5 +1,5 @@
 //! Async cache inspired by LMCache's distributed caching patterns
-//! 
+//!
 //! Provides TTL-based caching with async invalidation for protocol
 //! translations, reducing redundant computation over expensive satellite links.
 
@@ -41,7 +41,11 @@ impl AsyncCache {
     /// Get cached translation result
     pub async fn get(&self, protocol: Protocol, data: &Bytes, t_event: u64) -> Option<Message> {
         let data_hash = self.hash_data(data);
-        let key = CacheKey { protocol, data_hash, t_event };
+        let key = CacheKey {
+            protocol,
+            data_hash,
+            t_event,
+        };
 
         let entries = self.entries.read().await;
         if let Some(entry) = entries.get(&key) {
@@ -56,24 +60,36 @@ impl AsyncCache {
     /// Cache a translation result
     pub async fn set(&self, protocol: Protocol, data: &Bytes, message: Message) {
         let data_hash = self.hash_data(data);
-        let key = CacheKey { protocol, data_hash, t_event: message.t_event };
+        let key = CacheKey {
+            protocol,
+            data_hash,
+            t_event: message.t_event,
+        };
 
         let mut entries = self.entries.write().await;
-        
+
         // Evict oldest if at capacity
         if entries.len() >= self.max_entries {
             Self::evict_oldest(&mut entries);
         }
 
-        entries.insert(key, CacheEntry {
-            message,
-            timestamp: Instant::now(),
-            ttl: self.default_ttl,
-        });
+        entries.insert(
+            key,
+            CacheEntry {
+                message,
+                timestamp: Instant::now(),
+                ttl: self.default_ttl,
+            },
+        );
     }
 
     /// Invalidate cache entries for a specific protocol and time range
-    pub async fn invalidate_protocol_time_range(&self, protocol: Protocol, start_ms: u64, end_ms: u64) {
+    pub async fn invalidate_protocol_time_range(
+        &self,
+        protocol: Protocol,
+        start_ms: u64,
+        end_ms: u64,
+    ) {
         let mut entries = self.entries.write().await;
         entries.retain(|key, _| {
             key.protocol != protocol || !(key.t_event >= start_ms && key.t_event <= end_ms)
@@ -99,7 +115,7 @@ impl AsyncCache {
             .values()
             .filter(|e| e.timestamp.elapsed() < e.ttl)
             .count();
-        
+
         CacheStats {
             total_entries: entries.len(),
             valid_entries: valid_count,
@@ -151,36 +167,48 @@ mod tests {
     #[tokio::test]
     async fn test_cache_get_set() {
         let cache = AsyncCache::new(100, Duration::from_secs(60));
-        
+
         let message = Message::new(
             Protocol::IridiumSBD,
             Bytes::from(b"test data"),
             Priority::Operational,
         );
-        
+
         let t_event = message.t_event;
-        cache.set(Protocol::IridiumSBD, &Bytes::from(b"test data"), message.clone()).await;
-        
-        let cached = cache.get(Protocol::IridiumSBD, &Bytes::from(b"test data"), t_event).await;
+        cache
+            .set(
+                Protocol::IridiumSBD,
+                &Bytes::from(b"test data"),
+                message.clone(),
+            )
+            .await;
+
+        let cached = cache
+            .get(Protocol::IridiumSBD, &Bytes::from(b"test data"), t_event)
+            .await;
         assert!(cached.is_some());
     }
 
     #[tokio::test]
     async fn test_cache_ttl() {
         let cache = AsyncCache::new(100, Duration::from_millis(100));
-        
+
         let message = Message::new(
             Protocol::IridiumSBD,
             Bytes::from(b"test data"),
             Priority::Operational,
         );
-        
+
         let t_event = message.t_event;
-        cache.set(Protocol::IridiumSBD, &Bytes::from(b"test data"), message).await;
-        
+        cache
+            .set(Protocol::IridiumSBD, &Bytes::from(b"test data"), message)
+            .await;
+
         tokio::time::sleep(Duration::from_millis(150)).await;
-        
-        let cached = cache.get(Protocol::IridiumSBD, &Bytes::from(b"test data"), t_event).await;
+
+        let cached = cache
+            .get(Protocol::IridiumSBD, &Bytes::from(b"test data"), t_event)
+            .await;
         assert!(cached.is_none()); // Should be expired
     }
 }

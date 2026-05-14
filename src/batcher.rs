@@ -1,5 +1,5 @@
 //! Async memory-efficient batcher inspired by vLLM's batching patterns
-//! 
+//!
 //! Groups messages for efficient processing while maintaining low latency
 //! for emergency messages. Uses fixed-size buffers and backpressure.
 
@@ -17,11 +17,7 @@ pub struct AsyncBatcher {
 }
 
 impl AsyncBatcher {
-    pub fn new(
-        max_batch_size: usize,
-        batch_timeout: Duration,
-        buffer_size: usize,
-    ) -> Self {
+    pub fn new(max_batch_size: usize, batch_timeout: Duration, buffer_size: usize) -> Self {
         let (input_tx, mut input_rx) = mpsc::channel(buffer_size);
         let (output_tx, output_rx) = mpsc::channel(buffer_size);
 
@@ -42,11 +38,12 @@ impl AsyncBatcher {
                                     let _ = output_tx.send(emergency_batch).await;
                                 } else {
                                     buffer.push(msg);
-                                    
+
                                     // Flush if buffer full OR timeout OR should flush
-                                    if buffer.len() >= max_batch_size 
+                                    if buffer.len() >= max_batch_size
                                         || last_flush.elapsed() >= batch_timeout
-                                        || Self::should_flush(&buffer) {
+                                        || Self::should_flush(&buffer)
+                                    {
                                         let batch: Vec<_> = buffer.drain(..).collect();
                                         if !batch.is_empty() {
                                             let _ = output_tx.send(batch).await;
@@ -58,7 +55,7 @@ impl AsyncBatcher {
                             None => break, // Channel closed
                         }
                     }
-                    
+
                     // Timeout flush
                     _ = tokio::time::sleep_until(last_flush + batch_timeout) => {
                         if !buffer.is_empty() {
@@ -86,7 +83,7 @@ impl AsyncBatcher {
             .iter()
             .filter(|m| m.priority == Priority::SafetyCritical)
             .count();
-        
+
         // Flush if 5+ safety-critical messages
         safety_critical_count >= 5
     }
@@ -109,13 +106,13 @@ mod tests {
     #[tokio::test]
     async fn test_emergency_bypass() {
         let batcher = AsyncBatcher::new(10, Duration::from_millis(100), 100);
-        
+
         let emergency_msg = Message::new(
             crate::protocol::Protocol::IridiumSBD,
             bytes::Bytes::from(b"emergency"),
             crate::protocol::Priority::Emergency,
         );
-        
+
         // Emergency messages should be sent immediately
         let _ = batcher.send(emergency_msg).await;
         // In production, verify receiver gets single-message batch

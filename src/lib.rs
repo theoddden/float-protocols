@@ -1,8 +1,8 @@
 //! Float Protocols - Ultra-lightweight async protocol translation bridge
-//! 
+//!
 //! Inspired by vLLM's batching and LMCache's caching patterns, adapted for
 //! protocol translation in constrained dead zone environments.
-//! 
+//!
 //! Design Principles:
 //! - Async-first architecture for low latency
 //! - 99.9% uptime with circuit breakers, retries, and health checks
@@ -13,36 +13,35 @@
 //! - Snapshotting for fast uplink building
 //! - Inspired by inference serving optimization patterns
 
-pub mod protocol;
-pub mod translator;
-pub mod batcher;
-pub mod cache;
-pub mod gateway;
-pub mod reliability;
-pub mod metrics;
-pub mod sharding;
-pub mod snapshot;
-pub mod bitemporal;
-pub mod iridium_sbd;
 pub mod asts_protobuf;
-pub mod lifetime_safe;
+pub mod batcher;
+pub mod bitemporal;
+pub mod cache;
+pub mod cadence_translation;
 pub mod clock_reconciliation;
 pub mod dynamic_buffer;
-pub mod cadence_translation;
+pub mod gateway;
+pub mod iridium_sbd;
+pub mod lifetime_safe;
+pub mod metrics;
+pub mod protocol;
+pub mod reliability;
+pub mod sharding;
+pub mod snapshot;
+pub mod translator;
 
-pub use protocol::{Protocol, Message};
-pub use translator::Translator;
-pub use batcher::AsyncBatcher;
-pub use cache::AsyncCache;
-pub use gateway::Gateway;
-pub use reliability::{CircuitBreaker, RetryPolicy};
-pub use sharding::{ShardManager, ShardId};
-pub use snapshot::{SnapshotManager, Snapshot};
-pub use bitemporal::{BiTemporalStore, BiTemporalQuery, QueryTime, SpreadStats};
-pub use iridium_sbd::IridiumSBDMessage;
 pub use asts_protobuf::{ASTSProtobufMessage, ZeroCopyTranslator};
-pub use translator::BufferPool;
-pub use lifetime_safe::{SafeTranslationResult, TranslationArena, HybridTranslator};
-pub use clock_reconciliation::{ClockReconciler, ClockOffset, NetworkTimeSource};
-pub use dynamic_buffer::{DynamicBuffer, DynamicBufferPool, BufferError};
-pub use cadence_translation::{CadenceTranslator, CadenceRule, MessageCadence, TranslationAction};
+pub use batcher::AsyncBatcher;
+pub use bitemporal::{BiTemporalQuery, BiTemporalStore, QueryTime, SpreadStats};
+pub use cache::AsyncCache;
+pub use cadence_translation::{CadenceRule, CadenceTranslator, MessageCadence, TranslationAction};
+pub use clock_reconciliation::{ClockOffset, ClockReconciler, NetworkTimeSource};
+pub use dynamic_buffer::{BufferError, DynamicBuffer, DynamicBufferPool};
+pub use gateway::Gateway;
+pub use iridium_sbd::IridiumSBDMessage;
+pub use lifetime_safe::{HybridTranslator, SafeTranslationResult, TranslationArena};
+pub use protocol::{Message, Protocol};
+pub use reliability::{CircuitBreaker, RetryPolicy};
+pub use sharding::{ShardId, ShardManager};
+pub use snapshot::{Snapshot, SnapshotManager};
+pub use translator::{BufferPool, Translator};

@@ -1,5 +1,5 @@
 //! Zero-allocation AST SpaceMobile Protobuf encoding
-//! 
+//!
 //! Encodes messages in AST SpaceMobile-compatible Protobuf format
 //! without any heap allocations on the hot path.
 
@@ -38,7 +38,7 @@ impl ASTSProtobufMessage {
         if data.len() > 1024 {
             return false;
         }
-        
+
         self.payload[..data.len()].copy_from_slice(data);
         self.payload_len = data.len() as u16;
         self.header.length = data.len() as u16;
@@ -58,7 +58,8 @@ impl ASTSProtobufMessage {
         buffer[5..7].copy_from_slice(&self.header.length.to_be_bytes());
 
         // Write payload
-        buffer[7..7 + self.payload_len as usize].copy_from_slice(&self.payload[..self.payload_len as usize]);
+        buffer[7..7 + self.payload_len as usize]
+            .copy_from_slice(&self.payload[..self.payload_len as usize]);
 
         Some(total_size)
     }
@@ -92,7 +93,7 @@ impl ZeroCopyTranslator {
         output_buffer: &mut [u8],
     ) -> Option<usize> {
         let mut asts_msg = ASTSProtobufMessage::new(0x01, self.sequence);
-        
+
         // Copy payload directly (no allocation)
         if !asts_msg.set_payload(iridium_msg.payload_slice()) {
             return None;
@@ -111,7 +112,7 @@ impl ZeroCopyTranslator {
         output_buffer: &mut [u8],
     ) -> Option<usize> {
         let mut asts_msg = ASTSProtobufMessage::new(message_type, self.sequence);
-        
+
         if !asts_msg.set_payload(iridium_msg.payload_slice()) {
             return None;
         }
@@ -146,7 +147,9 @@ mod tests {
         let mut translator = ZeroCopyTranslator::new();
         let mut output_buffer = [0u8; 2048];
 
-        let size = translator.translate(&iridium_msg, &mut output_buffer).unwrap();
+        let size = translator
+            .translate(&iridium_msg, &mut output_buffer)
+            .unwrap();
         assert!(size > 0);
         assert_eq!(output_buffer[0], 0x01); // message type
     }

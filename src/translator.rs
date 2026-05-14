@@ -1,8 +1,8 @@
 //! Async protocol translation engine
-//! 
+//!
 //! Translates between legacy protocols (Iridium, Inmarsat, VSAT, etc.)
 //! and AST SpaceMobile cellular format, using async patterns for low latency.
-//! 
+//!
 //! Zero-allocation hot path for Iridium SBD to ASTS Protobuf translation.
 
 use crate::protocol::{Message, Protocol, Priority};
@@ -47,7 +47,7 @@ impl Translator {
     ) -> Result<usize, TranslateError> {
         let iridium_msg = IridiumSBDMessage::parse(iridium_data)
             .ok_or(TranslateError::InvalidProtocol)?;
-        
+
         translator.translate(iridium_msg, output_buffer)
             .ok_or(TranslateError::DataTooLarge)
     }

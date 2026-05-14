@@ -1,5 +1,5 @@
 //! Reliability patterns for 99.9% uptime
-//! 
+//!
 //! Implements circuit breakers, retry policies, and health checks
 //! inspired by cloud-native reliability patterns.
 
@@ -59,9 +59,13 @@ impl CircuitBreaker {
             // Check if recovery timeout has elapsed
             let last_failure = self.last_failure_time.load(Ordering::Acquire);
             let elapsed = Duration::from_millis(
-                (Instant::now().elapsed_since_startup()).unwrap_or(Duration::ZERO).as_millis() as u64 - last_failure
+                (Instant::now()
+                    .elapsed_since_startup()
+                    .unwrap_or(Duration::ZERO)
+                    .as_millis() as u64)
+                    - last_failure,
             );
-            
+
             if elapsed > self.recovery_timeout {
                 // Transition to HalfOpen
                 self.state.store(CircuitState::HalfOpen as u32, Ordering::Release);
@@ -80,8 +84,11 @@ impl CircuitBreaker {
     fn on_failure(&self) {
         let count = self.failure_count.fetch_add(1, Ordering::AcqRel) + 1;
         self.last_failure_time.store(
-            Instant::now().elapsed_since_startup().unwrap_or(Duration::ZERO).as_millis() as u64,
-            Ordering::Release
+            Instant::now()
+                .elapsed_since_startup()
+                .unwrap_or(Duration::ZERO)
+                .as_millis() as u64,
+            Ordering::Release,
         );
 
         if count >= self.failure_threshold {
@@ -168,8 +175,11 @@ impl HealthChecker {
             loop {
                 if check_fn() {
                     last_check.store(
-                        Instant::now().elapsed_since_startup().unwrap_or(Duration::ZERO).as_millis() as u64,
-                        Ordering::Release
+                        Instant::now()
+                            .elapsed_since_startup()
+                            .unwrap_or(Duration::ZERO)
+                            .as_millis() as u64,
+                        Ordering::Release,
                     );
                 }
                 tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
@@ -182,9 +192,16 @@ impl HealthChecker {
         if timestamp == 0 {
             None
         } else {
-            Some(Instant::now() - Duration::from_millis(
-                Instant::now().elapsed_since_startup().unwrap_or(Duration::ZERO).as_millis() as u64 - timestamp
-            ))
+            Some(
+                Instant::now()
+                    - Duration::from_millis(
+                        Instant::now()
+                            .elapsed_since_startup()
+                            .unwrap_or(Duration::ZERO)
+                            .as_millis() as u64
+                            - timestamp,
+                    ),
+            )
         }
     }
 

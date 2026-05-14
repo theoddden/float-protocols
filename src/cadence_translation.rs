@@ -1,10 +1,10 @@
 //! Cadence translation layer to solve Semantic Drift Between Protocols
-//! 
+//!
 //! Iridium is high-latency/low-bandwidth (heartbeat once per hour)
 //! ASTS is low-latency/high-bandwidth (heartbeat every 5 seconds)
 //! This layer manages differing cadences in a single bridge.
 
-use crate::protocol::{Protocol, Priority};
+use crate::protocol::{Priority, Protocol};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -39,7 +39,7 @@ pub struct CadenceRule {
     pub source_cadence: MessageCadence,
     pub target_protocol: Protocol,
     pub target_cadence: MessageCadence,
-    pub message_type: String,  // e.g., "heartbeat", "location", "telemetry"
+    pub message_type: String, // e.g., "heartbeat", "location", "telemetry"
     pub transformation: CadenceTransformation,
 }
 
@@ -116,7 +116,9 @@ impl CadenceTranslator {
                 target_protocol: Protocol::ASTSpaceMobile,
                 target_cadence: MessageCadence::Every5Seconds,
                 message_type: "heartbeat".to_string(),
-                transformation: CadenceTransformation::Duplicate { max_duplicates: 720 }, // 3600/5 = 720
+                transformation: CadenceTransformation::Duplicate {
+                    max_duplicates: 720,
+                }, // 3600/5 = 720
             },
             // Location: Iridium (1/minute) -> ASTS (10 seconds)
             CadenceRule {
@@ -125,7 +127,9 @@ impl CadenceTranslator {
                 target_protocol: Protocol::ASTSpaceMobile,
                 target_cadence: MessageCadence::Every10Seconds,
                 message_type: "location".to_string(),
-                transformation: CadenceTransformation::Throttle { target_interval_ms: 10000 },
+                transformation: CadenceTransformation::Throttle {
+                    target_interval_ms: 10000,
+                },
             },
             // Telemetry: Iridium (1/minute) -> ASTS (1/second)
             CadenceRule {
@@ -161,7 +165,8 @@ impl CadenceTranslator {
         }
 
         // Find matching rule
-        let rule = self.rules
+        let rule = self
+            .rules
             .iter()
             .find(|r| r.message_type == message_type && r.source_protocol == source_protocol);
 
@@ -170,10 +175,10 @@ impl CadenceTranslator {
                 CadenceTransformation::Passthrough => TranslationAction::Send,
                 CadenceTransformation::RateLimit { max_per_second } => {
                     let key = format!("{}:{}", rule.message_type, source_protocol);
-                    let limiter = self.rate_limiters
-                        .entry(key.clone())
-                        .or_insert_with(|| RateLimiter::new(Duration::from_secs_f64(1.0 / max_per_second)));
-                    
+                    let limiter = self.rate_limiters.entry(key.clone()).or_insert_with(|| {
+                        RateLimiter::new(Duration::from_secs_f64(1.0 / max_per_second))
+                    });
+
                     if limiter.should_send() {
                         TranslationAction::Send
                     } else {
@@ -183,17 +188,21 @@ impl CadenceTranslator {
                 CadenceTransformation::Aggregate { window_ms } => {
                     let key = format!("{}:{}", rule.message_type, source_protocol);
                     // TODO: Implement aggregation logic
-                    TranslationAction::Buffer { window_ms: *window_ms }
+                    TranslationAction::Buffer {
+                        window_ms: *window_ms,
+                    }
                 }
                 CadenceTransformation::Duplicate { max_duplicates } => {
-                    TranslationAction::Duplicate { count: *max_duplicates }
+                    TranslationAction::Duplicate {
+                        count: *max_duplicates,
+                    }
                 }
                 CadenceTransformation::Throttle { target_interval_ms } => {
                     let key = format!("{}:{}", rule.message_type, source_protocol);
-                    let limiter = self.rate_limiters
-                        .entry(key.clone())
-                        .or_insert_with(|| RateLimiter::new(Duration::from_millis(*target_interval_ms)));
-                    
+                    let limiter = self.rate_limiters.entry(key.clone()).or_insert_with(|| {
+                        RateLimiter::new(Duration::from_millis(*target_interval_ms))
+                    });
+
                     if limiter.should_send() {
                         TranslationAction::Send
                     } else {
@@ -208,7 +217,11 @@ impl CadenceTranslator {
     }
 
     /// Get recommended target cadence for a message type
-    pub fn get_target_cadence(&self, message_type: &str, source_protocol: Protocol) -> Option<MessageCadence> {
+    pub fn get_target_cadence(
+        &self,
+        message_type: &str,
+        source_protocol: Protocol,
+    ) -> Option<MessageCadence> {
         self.rules
             .iter()
             .find(|r| r.message_type == message_type && r.source_protocol == source_protocol)
@@ -219,7 +232,7 @@ impl CadenceTranslator {
     pub fn stats(&self) -> CadenceStats {
         let total_rules = self.rules.len();
         let active_rate_limiters = self.rate_limiters.len();
-        
+
         CadenceStats {
             total_rules,
             active_rate_limiters,
@@ -264,8 +277,9 @@ mod tests {
     #[test]
     fn test_emergency_passthrough() {
         let mut translator = CadenceTranslator::new();
-        
-        let action = translator.translate_message("heartbeat", Protocol::IridiumSBD, Priority::Emergency);
+
+        let action =
+            translator.translate_message("heartbeat", Protocol::IridiumSBD, Priority::Emergency);
         assert!(matches!(action, TranslationAction::Send));
     }
 

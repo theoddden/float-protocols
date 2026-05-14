@@ -1,5 +1,5 @@
 //! Snapshotting for fast uplink building (InferX pattern)
-//! 
+//!
 //! Creates snapshots of message batches for rapid uplink construction
 //! during deadzone transitions, enabling instant uplink without reprocessing.
 
@@ -38,7 +38,7 @@ impl SnapshotManager {
     pub async fn create_snapshot(&self, messages: Vec<Message>, protocol: Protocol) -> String {
         let snapshot_id = self.generate_snapshot_id(&messages, protocol);
         let size_bytes = messages.iter().map(|m| m.size()).sum();
-        
+
         let snapshot = Snapshot {
             id: snapshot_id.clone(),
             messages,
@@ -48,7 +48,7 @@ impl SnapshotManager {
         };
 
         let mut snapshots = self.snapshots.write().await;
-        
+
         // Evict oldest if at capacity
         if snapshots.len() >= self.max_snapshots {
             self.evict_oldest(&mut snapshots);
@@ -62,13 +62,13 @@ impl SnapshotManager {
     pub async fn get_snapshot(&self, snapshot_id: &str) -> Option<Snapshot> {
         let snapshots = self.snapshots.read().await;
         let snapshot = snapshots.get(snapshot_id)?;
-        
+
         // Check if snapshot is still valid (not expired)
         let age_ms = self.now_ms() - snapshot.created_at;
         if age_ms > self.snapshot_ttl.as_millis() as u64 {
             return None;
         }
-        
+
         Some(snapshot.clone())
     }
 
@@ -76,7 +76,7 @@ impl SnapshotManager {
     pub async fn get_protocol_snapshots(&self, protocol: Protocol) -> Vec<Snapshot> {
         let snapshots = self.snapshots.read().await;
         let now = self.now_ms();
-        
+
         snapshots
             .values()
             .filter(|s| s.protocol == protocol && (now - s.created_at) < self.snapshot_ttl.as_millis() as u64)
@@ -124,7 +124,7 @@ impl SnapshotManager {
     fn hash_messages(&self, messages: &[Message], protocol: Protocol) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         protocol.hash(&mut hasher);
         for msg in messages {
@@ -152,7 +152,7 @@ impl SnapshotManager {
                 .unwrap()
                 .as_millis() as u64
         }
-        
+
         #[cfg(not(feature = "std"))]
         {
             0

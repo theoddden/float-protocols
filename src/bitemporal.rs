@@ -1,9 +1,9 @@
 //! Bi-temporal query capabilities for insurance underwriting and trade compliance
-//! 
+//!
 //! Enables queries like:
 //! - "What did we believe the state of the fleet was at 3 PM yesterday?" (transaction time)
 //! - "What actually happened at 3 PM yesterday?" (valid time)
-//! 
+//!
 //! Maintains two timestamps per message:
 //! - t_event (Valid Time): When sensor recorded event in physical world
 //! - t_system (Transaction Time): When system first learned about event
@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryTime {
-    ValidTime,      // Query based on when events actually happened (t_event)
+    ValidTime,       // Query based on when events actually happened (t_event)
     TransactionTime, // Query based on when system learned about events (t_system)
 }
 
@@ -96,23 +96,29 @@ impl BiTemporalStore {
     /// Store a message with bi-temporal timestamps
     pub async fn store(&self, message: Message) {
         let mut messages = self.messages.write().await;
-        
+
         // Evict oldest if at capacity
         if messages.len() >= self.max_messages {
             messages.remove(0);
         }
-        
+
         messages.push(message);
     }
 
     /// Query messages by valid time (what actually happened)
     pub async fn query_valid_time(&self, start_ms: u64, end_ms: u64) -> Vec<Message> {
-        self.query(BiTemporalQuery::new(QueryTime::ValidTime, start_ms, end_ms)).await
+        self.query(BiTemporalQuery::new(QueryTime::ValidTime, start_ms, end_ms))
+            .await
     }
 
     /// Query messages by transaction time (what system believed)
     pub async fn query_transaction_time(&self, start_ms: u64, end_ms: u64) -> Vec<Message> {
-        self.query(BiTemporalQuery::new(QueryTime::TransactionTime, start_ms, end_ms)).await
+        self.query(BiTemporalQuery::new(
+            QueryTime::TransactionTime,
+            start_ms,
+            end_ms,
+        ))
+        .await
     }
 
     /// Execute a custom bi-temporal query

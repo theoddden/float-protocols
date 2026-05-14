@@ -1,5 +1,5 @@
 //! Lifetime-safe translation layer to solve "Slice-of-Death" problem
-//! 
+//!
 //! Provides owned data alternatives to zero-allocation slices to improve DX
 //! while maintaining performance through reference-counted Bytes.
 
@@ -36,7 +36,7 @@ impl TranslationArena {
         let buffers = (0..pool_size)
             .map(|_| vec![0u8; buffer_size])
             .collect();
-        
+
         Self {
             buffers,
             next_index: 0,
@@ -113,7 +113,7 @@ mod tests {
 
         let iridium_msg = IridiumSBDMessage::parse(&iridium_data).unwrap();
         let mut translator = HybridTranslator::new(8, 2048);
-        
+
         let result = translator.translate_safe(&iridium_msg).unwrap();
         assert_eq!(result.size, 12); // 7 bytes header + 5 bytes payload
     }

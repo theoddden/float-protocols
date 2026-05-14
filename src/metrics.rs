@@ -1,8 +1,8 @@
 //! Lightweight metrics for monitoring and 99.9% uptime tracking
-//! 
+//!
 //! Tracks message throughput, latency, error rates, and cache performance.
 
-use std::sync::atomic::{AtomicU64, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 pub struct Metrics {
@@ -67,7 +67,8 @@ impl Metrics {
 
     pub fn record_latency(&self, latency: Duration) {
         let latency_ms = latency.as_millis() as u64;
-        self.total_latency_ms.fetch_add(latency_ms, Ordering::Relaxed);
+        self.total_latency_ms
+            .fetch_add(latency_ms, Ordering::Relaxed);
         self.latency_samples.fetch_add(1, Ordering::Relaxed);
     }
 

@@ -1,5 +1,5 @@
 //! Protocol definitions for dead zone communication systems
-//! 
+//!
 //! Supports: Iridium SBD, Inmarsat C, VSAT, HF/VHF, RockBLOCK
 
 use bytes::Bytes;
@@ -31,8 +31,8 @@ pub struct Message {
     pub priority: Priority,
     pub timestamp: u64, // Unix timestamp in milliseconds (legacy, for compatibility)
     // Bi-temporal timestamps
-    pub t_event: u64,   // Valid Time: When sensor recorded event in physical world
-    pub t_system: u64,  // Transaction Time: When system first learned about event
+    pub t_event: u64,  // Valid Time: When sensor recorded event in physical world
+    pub t_system: u64, // Transaction Time: When system first learned about event
 }
 
 impl Message {
@@ -43,8 +43,8 @@ impl Message {
             data,
             priority,
             timestamp: now,
-            t_event: now,   // Default: assume event happened now
-            t_system: now,  // Default: system learned about it now
+            t_event: now,  // Default: assume event happened now
+            t_system: now, // Default: system learned about it now
         }
     }
 
@@ -128,11 +128,11 @@ impl fmt::Display for Protocol {
 impl Protocol {
     pub fn max_message_size(&self) -> usize {
         match self {
-            Protocol::IridiumSBD => 340,      // Iridium SBD max
-            Protocol::InmarsatC => 128,       // Inmarsat C max
-            Protocol::VSAT => 65536,          // VSAT variable (64KB typical)
-            Protocol::HFVHF => 1024,          // HF/VHF typical
-            Protocol::RockBLOCK => 340,       // RockBLOCK same as Iridium SBD
+            Protocol::IridiumSBD => 340,           // Iridium SBD max
+            Protocol::InmarsatC => 128,            // Inmarsat C max
+            Protocol::VSAT => 65536,               // VSAT variable (64KB typical)
+            Protocol::HFVHF => 1024,               // HF/VHF typical
+            Protocol::RockBLOCK => 340,            // RockBLOCK same as Iridium SBD
             Protocol::ASTSpaceMobile => 120000000, // 120 Mbps max theoretical
         }
     }

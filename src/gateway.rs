@@ -1,22 +1,22 @@
 //! Main gateway for protocol translation with AST SpaceMobile integration
-//! 
+//!
 //! Users bring their own ASTS account details for BYO authentication.
 //! Integrates with telemetry for accurate ping monitoring.
 
-use crate::protocol::{Message, Protocol, Priority};
-use crate::translator::Translator;
 use crate::batcher::AsyncBatcher;
+use crate::bitemporal::{BiTemporalQuery, BiTemporalStore, QueryTime};
 use crate::cache::AsyncCache;
-use crate::reliability::{CircuitBreaker, RetryPolicy};
 use crate::metrics::Metrics;
-use crate::sharding::{ShardManager, ShardId};
-use crate::snapshot::{SnapshotManager};
-use crate::bitemporal::{BiTemporalStore, BiTemporalQuery, QueryTime};
+use crate::protocol::{Message, Priority, Protocol};
+use crate::reliability::{CircuitBreaker, RetryPolicy};
+use crate::sharding::{ShardId, ShardManager};
+use crate::snapshot::SnapshotManager;
+use crate::translator::Translator;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, Instant};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ASTSCredentials {
@@ -103,15 +103,22 @@ impl Gateway {
         if message.is_emergency() {
             let _ = self.shard_manager.push_deadzone(message.clone()).await;
             // Create snapshot for instant uplink if needed
-            let snapshot_id = self.snapshot_manager.create_snapshot(
-                vec![message.clone()],
-                message.protocol
-            ).await;
-            tracing::debug!("Emergency message sent to deadzone shard, snapshot: {}", snapshot_id);
+            let snapshot_id = self
+                .snapshot_manager
+                .create_snapshot(vec![message.clone()], message.protocol)
+                .await;
+            tracing::debug!(
+                "Emergency message sent to deadzone shard, snapshot: {}",
+                snapshot_id
+            );
         }
 
         // Check cache first (bi-temporal: use t_event for cache key)
-        if let Some(cached) = self.cache.get(message.protocol, &message.data, message.t_event).await {
+        if let Some(cached) = self
+            .cache
+            .get(message.protocol, &message.data, message.t_event)
+            .await
+        {
             self.metrics.record_cache_hit();
             self.metrics.increment_translated();
             self.send_to_asts(cached).await;
@@ -124,7 +131,8 @@ impl Gateway {
         let _ = self.shard_manager.push(message.clone()).await;
 
         // Translate with circuit breaker and retry
-        let result = self.circuit_breaker
+        let result = self
+            .circuit_breaker
             .call(|| {
                 self.retry_policy.execute(|| {
                     Box::pin(async {
@@ -139,18 +147,19 @@ impl Gateway {
             Ok(_) => {
                 self.metrics.increment_translated();
                 self.metrics.record_latency(start.elapsed());
-                
+
                 // Cache the result (bi-temporal: include t_event)
                 if let Ok(translated) = self.translator.recv().await {
                     if let Some(translated) = translated {
-                        self.cache.set(message.protocol, &message.data, translated.clone()).await;
-                        
+                        self.cache
+                            .set(message.protocol, &message.data, translated.clone())
+                            .await;
+
                         // Create snapshot for fast uplink building
-                        self.snapshot_manager.create_snapshot(
-                            vec![translated.clone()],
-                            translated.protocol
-                        ).await;
-                        
+                        self.snapshot_manager
+                            .create_snapshot(vec![translated.clone()], translated.protocol)
+                            .await;
+
                         self.send_to_asts(translated).await;
                     }
                 }
@@ -204,12 +213,16 @@ impl Gateway {
 
     /// Query by valid time (what actually happened in physical world)
     pub async fn query_valid_time(&self, start_ms: u64, end_ms: u64) -> Vec<Message> {
-        self.bitemporal_store.query_valid_time(start_ms, end_ms).await
+        self.bitemporal_store
+            .query_valid_time(start_ms, end_ms)
+            .await
     }
 
     /// Query by transaction time (what system believed at the time)
     pub async fn query_transaction_time(&self, start_ms: u64, end_ms: u64) -> Vec<Message> {
-        self.bitemporal_store.query_transaction_time(start_ms, end_ms).await
+        self.bitemporal_store
+            .query_transaction_time(start_ms, end_ms)
+            .await
     }
 
     /// Get spread statistics for insurance underwriting
