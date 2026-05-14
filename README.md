@@ -6,7 +6,7 @@
 
 ## Overview
 
-Float Protocols is a primitive that bridges existing dead zone communication systems (Iridium, Inmarsat, VSAT, HF/VHF, RockBLOCK) to AST SpaceMobile's future direct-to-cell network that is partly launched. Users will bring their own ASTS account details for authentication. The system integrates with telemetry for accurate ping monitoring.
+Float Protocols is a primitive that bridges existing dead zone communication systems (Iridium, Inmarsat, VSAT, HF/VHF, RockBLOCK) to future satellite networks. Currently supports traditional satellite protocols with future-proofing for AST SpaceMobile's enterprise IoT APIs when released. The system integrates with telemetry for accurate ping monitoring.
 
 ### Design Principles
 
@@ -30,7 +30,9 @@ Float Protocols is a primitive that bridges existing dead zone communication sys
 
 ## Future Protocols
 
-- **AST SpaceMobile** - Direct-to-cell cellular format
+- **AST SpaceMobile** - Direct-to-cell cellular format (future-proofing for enterprise IoT APIs)
+
+**Note**: AST SpaceMobile integration is future-proofing for when they release enterprise APIs. AST SpaceMobile has successfully tested IoT device connectivity (BeWhere Holdings, Oct 2025) and plans NB-IoT support. The ASTS Protobuf format is speculative and will be updated based on official API documentation when released.
 
 ## Features
 
@@ -44,7 +46,7 @@ Float Protocols is a primitive that bridges existing dead zone communication sys
 - **Snapshotting**: Fast uplink building from pre-computed message batches
 - **Reliability**: Circuit breakers, retry policies, and health checks for 99.9% uptime
 - **Telemetry Integration**: Accurate ping monitoring and metrics
-- **BYO Authentication**: Users bring their own ASTS account details
+- **BYO Authentication**: Users bring their own credentials when APIs are available
 - **OTel-over-Satellite**: OpenTelemetry span collection and transmission via ASTS protobuf with compression
 
 ## Installation
@@ -58,10 +60,11 @@ cargo install float-protocols
 ### Environment Variables
 
 ```bash
-# AST SpaceMobile BYO Credentials (optional - for ASTS integration)
-export ASTS_ACCOUNT_ID="your_account_id"
-export ASTS_API_KEY="your_api_key"
-export ASTS_MNO_PARTNER_ID="partner_id" # optional
+# AST SpaceMobile Credentials (future - for when enterprise APIs are released)
+# Currently not available - ASTS integration is future-proofing
+# export ASTS_ACCOUNT_ID="your_account_id"
+# export ASTS_API_KEY="your_api_key"
+# export ASTS_MNO_PARTNER_ID="partner_id" # optional
 
 # Telemetry Configuration
 export TELEMETRY_ENABLED="true"
