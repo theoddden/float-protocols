@@ -5,7 +5,7 @@
 use bytes::Bytes;
 use float_protocols::protocol::{Message, Priority, Protocol};
 use float_protocols::sharding::{ShardId, ShardManager};
-use tokio::time::{interval, Duration, sleep};
+use tokio::time::{interval, sleep, Duration};
 
 #[tokio::test]
 async fn test_asts_toggle_stress() {

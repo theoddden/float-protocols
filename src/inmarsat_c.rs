@@ -126,9 +126,7 @@ impl InmarsatCMessage {
 
         // Validate source ID is valid hex
         if hex::decode(&source_id).is_err() {
-            return Err(ParseError::InvalidSourceId {
-                value: source_id,
-            });
+            return Err(ParseError::InvalidSourceId { value: source_id });
         }
 
         let payload = if data.len() > 14 {
