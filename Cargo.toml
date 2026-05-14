@@ -22,6 +22,8 @@ serde_json = { version = "1.0", default-features = false, features = ["std"] }
 
 # Protocol parsing
 nom = "7.1"  # Parser combinator for protocol parsing
+hex = "0.4"  # Hex encoding/decoding
+zstd = "0.13"  # Compression for VSAT
 
 # Reliability patterns
 tower = { version = "0.4", features = ["util", "timeout", "load-shed"], default-features = false }

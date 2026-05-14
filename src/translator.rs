@@ -6,8 +6,11 @@
 //! Zero-allocation hot path for Iridium SBD to ASTS Protobuf translation.
 
 use crate::asts_protobuf::ZeroCopyTranslator;
+use crate::hfvhf::HFVHFMessage;
+use crate::inmarsat_c::InmarsatCMessage;
 use crate::iridium_sbd::IridiumSBDMessage;
 use crate::protocol::{Message, Protocol};
+use crate::vsat::VSATMessage;
 use bytes::Bytes;
 use tokio::sync::mpsc;
 
@@ -124,18 +127,21 @@ impl Translator {
     }
 
     fn decode_inmarsat_c(data: &Bytes) -> Result<Bytes, TranslateError> {
-        // TODO: Implement Inmarsat C protocol parsing
-        Ok(data.clone())
+        let msg = InmarsatCMessage::parse(data).ok_or(TranslateError::InvalidProtocol)?;
+        let encoded = msg.encode();
+        Ok(Bytes::from(encoded))
     }
 
     fn compress_for_cellular(data: &Bytes) -> Result<Bytes, TranslateError> {
-        // TODO: Implement zstd compression for VSAT data
-        Ok(data.clone())
+        let msg = VSATMessage::parse(data).ok_or(TranslateError::InvalidProtocol)?;
+        let compressed = msg.encode();
+        Ok(Bytes::from(compressed))
     }
 
     fn codec_translate_to_digital(data: &Bytes) -> Result<Bytes, TranslateError> {
-        // TODO: Implement audio codec translation
-        Ok(data.clone())
+        let msg = HFVHFMessage::parse(data).ok_or(TranslateError::InvalidProtocol)?;
+        let digital = msg.codec_translate_to_digital();
+        Ok(Bytes::from(digital))
     }
 
     fn decode_rockblock(data: &Bytes) -> Result<Bytes, TranslateError> {
