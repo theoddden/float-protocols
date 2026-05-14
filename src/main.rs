@@ -56,7 +56,7 @@ fn validate_config() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up panic hook for structured crash logging
     std::panic::set_hook(Box::new(|panic_info| {
-        let backtrace = std::backtrace::Backtrace::new();
+        let backtrace = std::backtrace::Backtrace::capture();
         tracing::error!(
             panic = %panic_info,
             backtrace = %backtrace,
