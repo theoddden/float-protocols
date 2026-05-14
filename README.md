@@ -1,4 +1,4 @@
-Float Protocols
+#Float Protocols
 
 1.1MB binary - Ultra-lightweight, 100% Rust, async protocol-translation bridge for dead zone communication systems.
 STAR THE REPO, IT'S A HUGE HELP: https://github.com/theoddden/Float-Protocols
@@ -6,18 +6,8 @@ Overview
 
 Float Protocols is a primitive that bridges existing dead zone communication systems (Iridium, Inmarsat, VSAT, HF/VHF, RockBLOCK) to AST SpaceMobile's future direct-to-cell network that is partly launched. Users will bring their own ASTS account details for authentication. The system integrates with telemetry for accurate ping monitoring.
 
-Design Principles:
-Async-first architecture for low latency
-99% uptime goal with circuit breakers, retries, and health checks
-Ultra-lightweight: runs on pre-existing RAM on local ARM
-Zero-allocation where possible using stack-allocated buffers
-Fixed-size buffers for memory efficiency
-Memory sharding for immediate deadzone uplink (InferX pattern)
-Snapshotting for fast uplink building
-Inspired by vLLM batching and LMCache caching patterns
-Future Protocols
-
 AST SpaceMobile - Direct-to-cell cellular format
+
 Features
 
 Zero-Allocation Hot Path: Iridium SBD to ASTS Protobuf translation with NO heap allocations
@@ -46,24 +36,24 @@ Usage
 
 Environment Variables
 
-# AST SpaceMobile BYO Credentials (optional - for ASTS integration)
+AST SpaceMobile BYO Credentials (optional - for ASTS integration)
 export ASTS_ACCOUNT_ID="your_account_id"
 export ASTS_API_KEY="your_api_key"
 export ASTS_MNO_PARTNER_ID="partner_id" # optional
 
-# Telemetry Configuration
+Telemetry Configuration
 export TELEMETRY_ENABLED="true"
 export TELEMETRY_ENDPOINT="https://your-telemetry-endpoint.com"
 export TELEMETRY_PING_INTERVAL_MS="5000"
 
-# Logging
+Logging
 export RUST_LOG="float_protocols=info,tokio=warn"
 Running the Gateway
 
 cargo run --release
 Testing
 
-# Run with test message
+Run with test message
 FLOAT_PROTOCOLS_TEST=1 cargo run --release
 Zero-Allocation Hot Path
 
@@ -96,6 +86,7 @@ let size = translate_iridium_to_asts_sync(&iridium_data, &mut buffer)?;
 Zero-Allocation Trade-offs
 
 The async architecture (Tokio) requires heap allocations for:
+
 Task spawning and scheduling
 Channel buffers
 Arc reference counting
@@ -111,6 +102,7 @@ Telemetry integration
 Bi-Temporal Logic
 
 Float Protocols implements bi-temporal modeling for high-end insurance underwriting and global trade compliance:
+
 t_event (Valid Time): When the sensor actually recorded the event in the physical world
 t_system (Transaction Time): When your system first learned about that event
 Spread Calculation: Deterministic mark between t_event and t_system for compliance
