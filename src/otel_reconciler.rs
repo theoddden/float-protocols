@@ -67,10 +67,7 @@ impl BitemporalReconciler {
             span,
         };
 
-        self.records
-            .entry(entity_id)
-            .or_default()
-            .push(record);
+        self.records.entry(entity_id).or_default().push(record);
     }
 
     /// Extract t_event from span attributes
@@ -208,10 +205,7 @@ impl BitemporalReconciler {
             span,
         };
 
-        self.records
-            .entry(entity_id)
-            .or_default()
-            .push(record);
+        self.records.entry(entity_id).or_default().push(record);
     }
 
     /// Clear all records
