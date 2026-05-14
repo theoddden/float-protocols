@@ -68,6 +68,7 @@ impl Translator {
             Protocol::VSAT => Self::translate_vsat(message).await,
             Protocol::HFVHF => Self::translate_hfvhf(message).await,
             Protocol::RockBLOCK => Self::translate_rockblock(message).await,
+            Protocol::Samsara => Self::translate_samsara(message).await,
             Protocol::ASTSpaceMobile => Ok(message), // Already in target format
         }
     }
@@ -108,6 +109,14 @@ impl Translator {
         Ok(translated)
     }
 
+    async fn translate_samsara(message: Message) -> Result<Message, TranslateError> {
+        // Samsara cellular broadband → AST SpaceMobile cellular format
+        // Samsara already uses cellular, so minimal translation needed
+        let cellular_data = Self::decode_samsara(&message.data)?;
+        let translated = Message::new(Protocol::ASTSpaceMobile, cellular_data, message.priority);
+        Ok(translated)
+    }
+
     // Protocol-specific decoders (simplified for now)
     fn decode_iridium_sbd(data: &Bytes) -> Result<Bytes, TranslateError> {
         // TODO: Implement Iridium SBD protocol parsing
@@ -132,6 +141,12 @@ impl Translator {
     fn decode_rockblock(data: &Bytes) -> Result<Bytes, TranslateError> {
         // RockBLOCK uses Iridium SBD protocol
         Self::decode_iridium_sbd(data)
+    }
+
+    fn decode_samsara(data: &Bytes) -> Result<Bytes, TranslateError> {
+        // TODO: Implement Samsara protocol parsing
+        // Samsara uses JSON over HTTPS, for now pass through
+        Ok(data.clone())
     }
 
     pub fn zero_copy_translator(&mut self) -> &mut ZeroCopyTranslator {

@@ -13,6 +13,7 @@ pub enum Protocol {
     VSAT,
     HFVHF,
     RockBLOCK,
+    Samsara,
     ASTSpaceMobile,
 }
 
@@ -119,6 +120,7 @@ impl fmt::Display for Protocol {
             Protocol::VSAT => write!(f, "VSAT"),
             Protocol::HFVHF => write!(f, "HFVHF"),
             Protocol::RockBLOCK => write!(f, "RockBLOCK"),
+            Protocol::Samsara => write!(f, "Samsara"),
             Protocol::ASTSpaceMobile => write!(f, "ASTSpaceMobile"),
         }
     }
@@ -133,6 +135,7 @@ impl Protocol {
             Protocol::VSAT => 65536,               // VSAT variable (64KB typical)
             Protocol::HFVHF => 1024,               // HF/VHF typical
             Protocol::RockBLOCK => 340,            // RockBLOCK same as Iridium SBD
+            Protocol::Samsara => 1048576,          // Samsara cellular broadband (1MB typical)
             Protocol::ASTSpaceMobile => 120000000, // 120 Mbps max theoretical
         }
     }

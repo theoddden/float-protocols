@@ -23,6 +23,7 @@ Float Protocols bridges existing dead zone communication systems (Iridium, Inmar
 - **VSAT** - VSAT IP packets with compression
 - **HF/VHF** - HF/VHF radio with codec translation
 - **RockBLOCK** - RockBLOCK IoT satellite communication
+- **Samsara** - Samsara fleet management cellular broadband (1MB typical)
 - **AST SpaceMobile** - Direct-to-cell cellular format
 
 ## Features
