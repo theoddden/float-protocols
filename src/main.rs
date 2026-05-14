@@ -13,7 +13,6 @@
 use bytes::Bytes;
 use float_protocols::gateway::{ASTSCredentials, Gateway, TelemetryConfig};
 use float_protocols::protocol::{Message, Priority, Protocol};
-use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
