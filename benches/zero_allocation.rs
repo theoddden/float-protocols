@@ -1,6 +1,6 @@
 #![cfg(test)]
 //! Zero-allocation benchmark tests
-//! 
+//!
 //! Benchmarks to verify that the hot path has no heap allocations
 
 use float_protocols::{IridiumSBDMessage, ZeroCopyTranslator};

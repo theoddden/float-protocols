@@ -1,8 +1,8 @@
 //! Float Protocols - Ultra-lightweight async protocol translation bridge
-//! 
+//!
 //! Bridges dead zone communication systems (Iridium, Inmarsat, VSAT, HF/VHF, RockBLOCK)
 //! to AST SpaceMobile's direct-to-cell network with BYO account details.
-//! 
+//!
 //! Features:
 //! - Async-first architecture for low latency
 //! - 99.9% uptime with circuit breakers and retries
@@ -10,9 +10,9 @@
 //! - Inspired by vLLM batching and LMCache caching patterns
 //! - Telemetry integration for accurate ping monitoring
 
-use float_protocols::gateway::{Gateway, ASTSCredentials, TelemetryConfig};
-use float_protocols::protocol::{Message, Protocol, Priority};
 use bytes::Bytes;
+use float_protocols::gateway::{ASTSCredentials, Gateway, TelemetryConfig};
+use float_protocols::protocol::{Message, Priority, Protocol};
 use tokio::signal;
 
 #[tokio::main]
@@ -51,9 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize gateway
     let gateway = Gateway::new(
-        1000, // buffer size
+        1000,                                    // buffer size
         tokio::time::Duration::from_millis(100), // batch timeout
-        tokio::time::Duration::from_secs(60), // cache TTL
+        tokio::time::Duration::from_secs(60),    // cache TTL
         asts_credentials,
         telemetry_config,
     );

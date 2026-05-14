@@ -68,6 +68,7 @@ impl MemoryShard {
             self.buffer.reserve(self.max_size - self.buffer.capacity());
         }
     }
+}
 
 pub struct ShardManager {
     shards: RwLock<HashMap<ShardId, MemoryShard>>,
