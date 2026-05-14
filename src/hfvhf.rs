@@ -13,10 +13,10 @@ pub struct HFVHFMessage {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModulationType {
-    AM,    // Amplitude Modulation
-    FM,    // Frequency Modulation
-    SSB,   // Single Sideband
-    CW,    // Continuous Wave (Morse code)
+    AM,  // Amplitude Modulation
+    FM,  // Frequency Modulation
+    SSB, // Single Sideband
+    CW,  // Continuous Wave (Morse code)
 }
 
 impl HFVHFMessage {
@@ -91,7 +91,7 @@ impl HFVHFMessage {
     pub fn resample(&self, target_rate: u32, original_rate: u32) -> Self {
         let ratio = target_rate as f64 / original_rate as f64;
         let new_len = (self.audio_samples.len() as f64 * ratio) as usize;
-        
+
         let mut new_samples = Vec::with_capacity(new_len);
         for i in 0..new_len {
             let src_idx = (i as f64 / ratio) as usize;

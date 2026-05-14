@@ -26,8 +26,14 @@ impl InmarsatCMessage {
         // Bytes 10-127: Payload
 
         let message_number = u16::from_be_bytes([data[0], data[1]]);
-        let destination_id = format!("{:02x}{:02x}{:02x}{:02x}", data[2], data[3], data[4], data[5]);
-        let source_id = format!("{:02x}{:02x}{:02x}{:02x}", data[6], data[7], data[8], data[9]);
+        let destination_id = format!(
+            "{:02x}{:02x}{:02x}{:02x}",
+            data[2], data[3], data[4], data[5]
+        );
+        let source_id = format!(
+            "{:02x}{:02x}{:02x}{:02x}",
+            data[6], data[7], data[8], data[9]
+        );
         let payload = Bytes::copy_from_slice(&data[10..]);
 
         Some(Self {
