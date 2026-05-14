@@ -129,10 +129,40 @@ impl Translator {
         Ok(translated)
     }
 
-    // Protocol-specific decoders (simplified for now)
+    // Protocol-specific decoders using nom for zero-copy parsing
     fn decode_iridium_sbd(data: &Bytes) -> Result<Bytes, TranslateError> {
-        // TODO: Implement Iridium SBD protocol parsing
-        Ok(data.clone())
+        use nom::bytes::complete::take;
+        use nom::number::complete::{be_u16, be_u8};
+        use nom::sequence::tuple;
+
+        // Iridium SBD format: [protocol (1)][length (2)][payload (N)][checksum (2)]
+        let result = tuple((
+            be_u8,    // protocol
+            be_u16,   // length
+            take(340u8), // payload (max 340 bytes)
+            be_u16,   // checksum
+        ))(data);
+
+        match result {
+            Ok((_, (protocol, length, payload, checksum))) => {
+                // Validate length
+                if length > 340 {
+                    return Err(TranslateError::InvalidProtocol);
+                }
+
+                // Extract actual payload based on length
+                let actual_payload = &payload[..length.min(340) as usize];
+
+                // Convert to ASTS cellular format
+                // For now, just pass through the payload with a cellular header
+                let mut cellular = Vec::with_capacity(1 + actual_payload.len());
+                cellular.push(protocol); // Protocol identifier
+                cellular.extend_from_slice(actual_payload);
+
+                Ok(Bytes::from(cellular))
+            }
+            Err(_) => Err(TranslateError::InvalidProtocol),
+        }
     }
 
     fn decode_inmarsat_c(data: &Bytes) -> Result<Bytes, TranslateError> {
