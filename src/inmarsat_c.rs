@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_inmarsat_c_parse() {
-        let mut data = vec![0u8; 20];
+        let mut data = vec![0u8; 21];
         // Magic number
         data[0..4].copy_from_slice(&MAGIC_NUMBER.to_be_bytes());
         // Message number
