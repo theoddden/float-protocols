@@ -38,7 +38,10 @@ async fn test_network_partition_circuit_breaker_trips() {
 
     // Verify circuit breaker tripped
     let health = gateway.health_check().await;
-    assert!(!health, "Circuit breaker should trip after repeated failures");
+    assert!(
+        !health,
+        "Circuit breaker should trip after repeated failures"
+    );
 }
 
 #[tokio::test]

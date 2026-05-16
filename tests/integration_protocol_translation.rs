@@ -36,7 +36,10 @@ async fn test_iridium_to_asts_end_to_end() {
 
     // Verify metrics
     let metrics = gateway.metrics().snapshot();
-    assert!(metrics.messages_translated > 0, "Message should be translated");
+    assert!(
+        metrics.messages_translated > 0,
+        "Message should be translated"
+    );
 }
 
 #[tokio::test]
@@ -63,7 +66,10 @@ async fn test_inmarsat_to_asts_end_to_end() {
     sleep(Duration::from_millis(200)).await;
 
     let metrics = gateway.metrics().snapshot();
-    assert!(metrics.messages_translated > 0, "Message should be translated");
+    assert!(
+        metrics.messages_translated > 0,
+        "Message should be translated"
+    );
 }
 
 #[tokio::test]
@@ -90,7 +96,10 @@ async fn test_vsat_to_asts_end_to_end() {
     sleep(Duration::from_millis(200)).await;
 
     let metrics = gateway.metrics().snapshot();
-    assert!(metrics.messages_translated > 0, "Message should be translated");
+    assert!(
+        metrics.messages_translated > 0,
+        "Message should be translated"
+    );
 }
 
 #[tokio::test]
@@ -117,7 +126,10 @@ async fn test_hfvhf_to_asts_end_to_end() {
     sleep(Duration::from_millis(200)).await;
 
     let metrics = gateway.metrics().snapshot();
-    assert!(metrics.messages_translated > 0, "Message should be translated");
+    assert!(
+        metrics.messages_translated > 0,
+        "Message should be translated"
+    );
 }
 
 #[tokio::test]
@@ -144,7 +156,10 @@ async fn test_samsara_to_asts_end_to_end() {
     sleep(Duration::from_millis(200)).await;
 
     let metrics = gateway.metrics().snapshot();
-    assert!(metrics.messages_translated > 0, "Message should be translated");
+    assert!(
+        metrics.messages_translated > 0,
+        "Message should be translated"
+    );
 }
 
 #[tokio::test]
@@ -180,8 +195,7 @@ async fn test_multi_protocol_batch_translation() {
 
     let metrics = gateway.metrics().snapshot();
     assert_eq!(
-        metrics.messages_translated,
-        5,
+        metrics.messages_translated, 5,
         "All 5 messages should be translated"
     );
 }
@@ -248,15 +262,23 @@ async fn test_bitemporal_storage_in_translation_flow() {
     sleep(Duration::from_millis(200)).await;
 
     // Query by valid time
-    let events = gateway.query_valid_time(t_event - 1000, t_event + 1000).await;
-    assert!(!events.is_empty(), "Message should be stored in bi-temporal store");
+    let events = gateway
+        .query_valid_time(t_event - 1000, t_event + 1000)
+        .await;
+    assert!(
+        !events.is_empty(),
+        "Message should be stored in bi-temporal store"
+    );
 
     // Query by transaction time
     let t_system = message.t_system;
     let beliefs = gateway
         .query_transaction_time(t_system - 1000, t_system + 1000)
         .await;
-    assert!(!beliefs.is_empty(), "Message should be queryable by transaction time");
+    assert!(
+        !beliefs.is_empty(),
+        "Message should be queryable by transaction time"
+    );
 }
 
 #[tokio::test]
@@ -275,11 +297,7 @@ async fn test_emergency_message_priority_handling() {
 
     // Send emergency message
     let emergency_data = Bytes::from(vec![0xFF; 200]);
-    let emergency_message = Message::new(
-        Protocol::IridiumSBD,
-        emergency_data,
-        Priority::Emergency,
-    );
+    let emergency_message = Message::new(Protocol::IridiumSBD, emergency_data, Priority::Emergency);
 
     let _ = gateway.send(emergency_message).await;
     sleep(Duration::from_millis(200)).await;
@@ -289,7 +307,10 @@ async fn test_emergency_message_priority_handling() {
     let deadzone_shard_id = shard_manager.get_deadzone_shard();
     let deadzone_messages = shard_manager.drain_shard(deadzone_shard_id);
 
-    assert!(!deadzone_messages.is_empty(), "Emergency message should be in deadzone shard");
+    assert!(
+        !deadzone_messages.is_empty(),
+        "Emergency message should be in deadzone shard"
+    );
 }
 
 #[tokio::test]
@@ -317,6 +338,11 @@ async fn test_snapshot_creation_in_translation_flow() {
 
     // Verify snapshot was created
     let snapshot_manager = gateway.snapshot_manager();
-    let snapshots = snapshot_manager.get_protocol_snapshots(Protocol::IridiumSBD).await;
-    assert!(!snapshots.is_empty(), "Snapshot should be created for translated message");
+    let snapshots = snapshot_manager
+        .get_protocol_snapshots(Protocol::IridiumSBD)
+        .await;
+    assert!(
+        !snapshots.is_empty(),
+        "Snapshot should be created for translated message"
+    );
 }

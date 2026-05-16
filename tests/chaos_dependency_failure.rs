@@ -99,13 +99,19 @@ async fn test_shard_manager_failure_handling() {
     );
 
     let result = gateway.send(message).await;
-    assert!(result.is_ok(), "Message send should succeed or fail gracefully");
+    assert!(
+        result.is_ok(),
+        "Message send should succeed or fail gracefully"
+    );
 
     sleep(Duration::from_millis(200)).await;
 
     // Verify system remained operational
     let health = gateway.health_check().await;
-    assert!(health, "System should remain healthy despite shard manager issues");
+    assert!(
+        health,
+        "System should remain healthy despite shard manager issues"
+    );
 }
 
 #[tokio::test]
@@ -241,7 +247,10 @@ async fn test_dependency_failure_with_deadzone() {
     let deadzone_shard_id = shard_manager.get_deadzone_shard();
     let deadzone_messages = shard_manager.drain_shard(deadzone_shard_id);
 
-    assert!(!deadzone_messages.is_empty(), "Emergency message should be in deadzone shard");
+    assert!(
+        !deadzone_messages.is_empty(),
+        "Emergency message should be in deadzone shard"
+    );
 }
 
 #[tokio::test]
@@ -329,7 +338,10 @@ async fn test_dependency_failure_with_high_priority_messages() {
     let deadzone_shard_id = shard_manager.get_deadzone_shard();
     let deadzone_messages = shard_manager.drain_shard(deadzone_shard_id);
 
-    assert!(!deadzone_messages.is_empty(), "Emergency message should be prioritized");
+    assert!(
+        !deadzone_messages.is_empty(),
+        "Emergency message should be prioritized"
+    );
 }
 
 #[tokio::test]
@@ -363,7 +375,10 @@ async fn test_dependency_failure_memory_pressure() {
 
     // Verify no memory leaks
     let leak_stats = shard_manager.leak_stats();
-    assert_eq!(leak_stats.leaked, 0, "No memory should be leaked under pressure");
+    assert_eq!(
+        leak_stats.leaked, 0,
+        "No memory should be leaked under pressure"
+    );
 
     // Verify system remained operational
     let health = gateway.health_check().await;

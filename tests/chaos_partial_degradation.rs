@@ -252,7 +252,10 @@ async fn test_partial_degradation_memory_pressure() {
 
     // Verify no memory leaks
     let leak_stats = shard_manager.leak_stats();
-    assert_eq!(leak_stats.leaked, 0, "No memory should be leaked under pressure");
+    assert_eq!(
+        leak_stats.leaked, 0,
+        "No memory should be leaked under pressure"
+    );
 
     // Verify system still works
     let metrics = gateway.metrics().snapshot();
@@ -438,7 +441,10 @@ async fn test_partial_degradation_priority_preservation() {
     let deadzone_shard_id = shard_manager.get_deadzone_shard();
     let deadzone_messages = shard_manager.drain_shard(deadzone_shard_id);
 
-    assert!(!deadzone_messages.is_empty(), "Emergency priority should be preserved");
+    assert!(
+        !deadzone_messages.is_empty(),
+        "Emergency priority should be preserved"
+    );
 }
 
 #[tokio::test]
