@@ -95,6 +95,7 @@ async fn test_network_partition_recovery() {
     assert!(health_after, "Circuit breaker should recover after timeout");
 }
 
+#[tokio::test]
 async fn test_intermittent_connectivity_flapping() {
     let gateway = Gateway::new(
         100,
